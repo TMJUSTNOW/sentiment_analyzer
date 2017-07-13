@@ -2,6 +2,7 @@
 This model tries to analyze sentiment (at character level) using LSTM
 Read this Example of RNN in TF
 https://r2rt.com/recurrent-neural-networks-in-tensorflow-i.html
+http://www.wildml.com/2016/08/rnns-in-tensorflow-a-practical-guide-and-undocumented-features/
 """
 import os
 import json
@@ -12,10 +13,10 @@ import matplotlib.pyplot as plt
 ## Data preprocessing
 
 # Read data set(IMDB Review data)
-train_pos_sample_dir = '/home/john/geek_stuff/Data Set/IMDB_sentiment_analysis_data/aclImdb/train/pos'
-train_neg_sample_dir = '/home/john/geek_stuff/Data Set/IMDB_sentiment_analysis_data/aclImdb/train/neg'
-test_neg_sample_dir = '/home/john/geek_stuff/Data Set/IMDB_sentiment_analysis_data/aclImdb/test/neg'
-test_pos_sample_dir = '/home/john/geek_stuff/Data Set/IMDB_sentiment_analysis_data/aclImdb/test/pos'
+train_pos_sample_dir = '/home/janmejaya/sentiment_analyzer/aclImdb/train/pos'
+train_neg_sample_dir = '/home/janmejaya/sentiment_analyzer/aclImdb/train/neg'
+test_neg_sample_dir = '/home/janmejaya/sentiment_analyzer/aclImdb/test/neg'
+test_pos_sample_dir = '/home/janmejaya/sentiment_analyzer/aclImdb/test/pos'
 
 # create a set of all character
 file_list_pos = [each_file for each_file in os.listdir(train_pos_sample_dir) if os.path.isfile(os.path.join(train_pos_sample_dir, each_file))]
@@ -31,6 +32,8 @@ for num_of_file, each_file in enumerate(file_list):
             data += f.read()
     if num_of_file > 3000:
         break
+
+# Generating vocabulary of unique Character.
 vocab = set(data)
 len_vocab = len(vocab)
 del file_list
@@ -40,7 +43,7 @@ idx_to_vocab = dict(enumerate(vocab))
 vocab_to_idx = dict(zip(idx_to_vocab.values(), idx_to_vocab.keys()))
 
 file_pointer = 0
-max_chars = 500     # Maximum number of character to keep in a Review
+max_chars = 500     # Maximum number of character to keep in each Review
 def next_batch(batch_size, test=False):
     # This function reads equal amount of positive and negative review depending on batch size.
     # returns input_data of size [batch_size, max_chars]
@@ -113,7 +116,7 @@ learning_rate = 1e-2
 disp_step = 50
 saving_step = 10
 fc_neurons = 100
-restore_model = True
+restore_model = False
 # whf = tf.Variable(tf.random_normal([max_chars*state_size, fc_neurons]), name='whf')          # weights from hidden layer to fc layer
 # bhf = tf.Variable(tf.random_normal([fc_neurons]), name='bhf')
 # wfo = tf.Variable(tf.random_normal([fc_neurons, num_classes], name='wfo'))      # Weight from fully connected to output layer
@@ -165,13 +168,15 @@ rnn_outputs, final_state = tf.contrib.rnn.static_rnn(cell, rnn_inputs, initial_s
 # Changing Shape of rnn_outputs to [batch_size, max_chars, state_size]
 rnn_output = tf.transpose(rnn_outputs, [1, 0, 2])
 print("RNN_outputs Shape ", len(rnn_outputs))
+dropped_rnn_output = tf.nn.dropout(rnn_output, keep_prob=0.75)
 
 # Flattening output before connecting it to FC layer
-flatten_output = tf.reshape(rnn_output, [-1, whf.get_shape().as_list()[0]])
+flatten_output = tf.reshape(dropped_rnn_output, [-1, whf.get_shape().as_list()[0]])
 # Connecting a Fully connected layer on top
 fc1 = tf.nn.relu(tf.add(tf.matmul(flatten_output, whf), bhf))
+dropped_fc1 = tf.nn.dropout(fc1, keep_prob=0.75)
 # O/P layer
-out = tf.add(tf.matmul(fc1, wfo), bfo)
+out = tf.add(tf.matmul(dropped_fc1, wfo), bfo)
 
 
 losses =tf.nn.sparse_softmax_cross_entropy_with_logits(logits=out, labels=y)
@@ -208,26 +213,6 @@ with tf.Session() as sess:
             saver.save(sess, 'tf_models/char_level_sentiment_analyzer')
             print('Model saved, step: {0}'.format(epoch))
         if epoch % disp_step == 0:
-            # sample the result
-            # size of logits [num_char, batch_size, n_class]
-            data_dict = next_batch(batch_size, test=True)
-            feed_dict2 = {x: data_dict['input_data']}
-            if len(training_state) != 0:
-                feed_dict2[init_state] = training_state
-            prediction = sess.run([out], feed_dict=feed_dict2)
-            result_dict = {}
-            batch_prediction = sess.run(tf.nn.softmax(prediction[0]))
-            review = ''
-            for ind in data_dict['input_data'][0]:
-                review += idx_to_vocab[ind]
-            print(review)
-            print('\nPrediction\t', batch_prediction[0])
-            review = ''
-            for ind in data_dict['input_data'][batch_size-1]:
-                review += idx_to_vocab[ind]
-            print(review)
-            print('\nPrediction\t', batch_prediction[batch_size-1])
-
             # Finding Testing Error
             print('Testing For data')
             acc = 0
@@ -235,4 +220,25 @@ with tf.Session() as sess:
                 data_dict = next_batch(batch_size, test=True)
                 feed_dict2 = {x: data_dict['input_data'], y: data_dict['target_data']}
                 acc += sess.run([accuracy], feed_dict=feed_dict2)[0]
-            print('Accuracy in percentage: {0}'.format((acc/(len(file_list_pos) // batch_size)) * 100))
+            print('Accuracy in percentage: {0}'.format((acc / (len(file_list_pos) // batch_size)) * 100))
+
+            # sample the result
+            # size of logits [num_char, batch_size, n_class]
+            data_dict = next_batch(batch_size, test=True)
+            feed_dict2 = {x: data_dict['input_data']}
+            if len(training_state) != 0:
+                feed_dict2[init_state] = training_state
+            prediction = sess.run([out], feed_dict=feed_dict2)
+            batch_prediction = sess.run(tf.nn.softmax(prediction[0]))
+            review = ''
+            for ind in data_dict['input_data'][0]:
+                review += idx_to_vocab[ind]
+            print(review)
+            print('\nPrediction\t', batch_prediction[0])
+            print('\nActual Output\t', data_dict['target_data'][0])
+            review = ''
+            for ind in data_dict['input_data'][batch_size-1]:
+                review += idx_to_vocab[ind]
+            print(review)
+            print('\nPrediction\t', batch_prediction[batch_size-1])
+            print('\nActual Output\t', data_dict['target_data'][batch_size-1])

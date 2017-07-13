@@ -1,3 +1,3 @@
-# sentiment_analyzer
+# sentiment_analyser
 
-Build a Sentiment Analyzer using LSTM in Tensorflow
+A Sentiment Analyser using LSTM in Tensorflow
