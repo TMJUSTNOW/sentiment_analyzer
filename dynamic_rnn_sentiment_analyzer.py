@@ -1,3 +1,4 @@
+
 """
 This model tries to analyze sentiment (at character level) using LSTM
 Read this Example of RNN in TF
@@ -14,10 +15,10 @@ from scipy.stats import mode
 ## Data preprocessing
 
 # Read data set(IMDB Review data)
-train_pos_sample_dir = '/home/john/geek_stuff/Data Set/IMDB_sentiment_analysis_data/aclImdb/train/pos'
-train_neg_sample_dir = '/home/john/geek_stuff/Data Set/IMDB_sentiment_analysis_data/aclImdb/train/neg'
-test_neg_sample_dir = '/home/john/geek_stuff/Data Set/IMDB_sentiment_analysis_data/aclImdb/test/neg'
-test_pos_sample_dir = '/home/john/geek_stuff/Data Set/IMDB_sentiment_analysis_data/aclImdb/test/pos'
+train_pos_sample_dir = '/home/janmejaya/sentiment_analyzer/aclImdb/train/pos'
+train_neg_sample_dir = '/home/janmejaya/sentiment_analyzer/aclImdb/train/neg'
+test_neg_sample_dir = '/home/janmejaya/sentiment_analyzer/aclImdb/test/neg'
+test_pos_sample_dir = '/home/janmejaya/sentiment_analyzer/aclImdb/test/pos'
 
 # create a set of all character
 file_list_pos = [each_file for each_file in os.listdir(train_pos_sample_dir) if os.path.isfile(os.path.join(train_pos_sample_dir, each_file))]
@@ -138,6 +139,7 @@ init_hidden_state_h = tf.Variable(tf.random_normal([batch_size, state_size]), na
 
 x = tf.placeholder(tf.int32, [batch_size, None], name='input_placeholder')
 y = tf.placeholder(tf.int32, [batch_size], name='labels_placeholder')
+max_character = tf.placeholder(tf.int32, name='max_char')
 
 # input to dynamic RNN should be of shape [batch_size, len_of_seq, input_size]
 rnn_inputs = tf.one_hot(x, len_vocab)
@@ -160,7 +162,7 @@ if restore_model:
                             tf.Variable(tf.get_default_graph().get_tensor_by_name('init_hidden_state_h:0'),
                                         name='init_hidden_state_h1', trainable=False)])
 else:
-    whf = tf.Variable(tf.random_normal([max_chars * state_size, fc_neurons]),
+    whf = tf.Variable(tf.random_normal([max_character * state_size, fc_neurons]),
                       name='whf')  # weights from hidden layer to fc layer
     bhf = tf.Variable(tf.random_normal([fc_neurons]), name='bhf')
     wfo = tf.Variable(
@@ -172,17 +174,19 @@ else:
     print('Init state [0]', init_state[0])
 
 # init_state = tf.Variable(cell.zero_state(batch_size, tf.float32), name='init_state')
-rnn_outputs, final_state = tf.contrib.rnn.static_rnn(cell, rnn_inputs, initial_state=init_state)
+rnn_outputs, final_state = tf.nn.dynamic_rnn(cell, rnn_inputs, initial_state=init_state)
+print("rnn_outputs shape ", rnn_outputs.get_shape().as_list())
+print('Final State shape', final_state)
 # rnn_outputs is a list of "number of inputs(or max_chars)" of rnn_output
 # shape of rnn_output is [batch_size, state_size]
 # logits has shape of [batch_size, num_classes]
 # Changing Shape of rnn_outputs to [batch_size, max_chars, state_size]
-rnn_output = tf.transpose(rnn_outputs, [1, 0, 2])
-print("RNN_outputs Shape ", len(rnn_outputs))
-dropped_rnn_output = tf.nn.dropout(rnn_output, keep_prob=0.75)
+# rnn_output = tf.transpose(rnn_outputs, [1, 0, 2])
+# print("RNN_outputs Shape ", len(rnn_outputs))
+dropped_rnn_output = tf.nn.dropout(rnn_outputs, keep_prob=0.75)
 
 # Flattening output before connecting it to FC layer
-flatten_output = tf.reshape(dropped_rnn_output, [-1, whf.get_shape().as_list()[0]])
+flatten_output = tf.reshape(dropped_rnn_output, [-1, max_character*state_size])
 # Connecting a Fully connected layer on top
 fc1 = tf.nn.relu(tf.add(tf.matmul(flatten_output, whf), bhf))
 dropped_fc1 = tf.nn.dropout(fc1, keep_prob=0.75)

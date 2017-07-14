@@ -41,6 +41,10 @@ del data
 print('Len of vocab', len_vocab)
 idx_to_vocab = dict(enumerate(vocab))
 vocab_to_idx = dict(zip(idx_to_vocab.values(), idx_to_vocab.keys()))
+# Adding Extra Padding char to dictionary
+idx_to_vocab[len_vocab] = '<pad>'
+vocab_to_idx['<pad>'] = len_vocab
+pad_index = len_vocab
 
 file_pointer = 0
 max_chars = 500     # Maximum number of character to keep in each Review
@@ -49,7 +53,7 @@ def next_batch(batch_size, test=False):
     # returns input_data of size [batch_size, max_chars]
     #     and target_data of size [batch_size, 1]
 
-    global file_pointer, file_list_pos, file_list_neg
+    global file_pointer, file_list_pos, file_list_neg, len_vocab
     if batch_size % 2 != 0:
         print("[ERROR]Please provide batch_size divisible by 2")
     if test:
@@ -73,6 +77,7 @@ def next_batch(batch_size, test=False):
 
     input_data = np.zeros([batch_size, max_chars], dtype=np.int32)
     target_data = np.zeros([batch_size], dtype=np.int32)
+    char_len = np.zeros([batch_size], dtype=np.int32)
 
     for position, each_file in enumerate(pos_file_to_read+neg_file_to_read):
         if test:
@@ -83,30 +88,50 @@ def next_batch(batch_size, test=False):
             neg_dir = train_neg_sample_dir
         try:
             with open(os.path.join(pos_dir, each_file), 'r') as f:
-                data = f.read()[:max_chars]
+                data = f.read()
                 if len(data) < max_chars:
-                    data += '*'*(max_chars-len(data))
+                    number_of_padding = (max_chars - len(data))
+                    char_len[position] = len(data)
+                else:
+                    number_of_padding = 0
+                    char_len[position] = max_chars
+
                 truncated_review = []
-                for char in data:
+                for char in data[:max_chars]:
                     if char not in vocab_to_idx:
-                        vocab_to_idx[char] = max(vocab_to_idx.values()) + 1
+                        len_vocab += 1
+                        vocab_to_idx[char] = len_vocab
                     truncated_review.append(vocab_to_idx[char])
-                input_data[position] = truncated_review
+
+                if number_of_padding:
+                    input_data[position] = truncated_review + [pad_index] * number_of_padding
+                else:
+                    input_data[position] = truncated_review
                 target_data[position] = 1
         except:
             with open(os.path.join(neg_dir, each_file), 'r') as f:
-                data = f.read()[:max_chars]
+                data = f.read()
                 if len(data) < max_chars:
-                    data += '*'*(max_chars-len(data))
+                    number_of_padding = (max_chars - len(data))
+                    char_len[position] = len(data)
+                else:
+                    number_of_padding = 0
+                    char_len[position] = max_chars
+
                 truncated_review = []
-                for char in data:
+                for char in data[:max_chars]:
                     if char not in vocab_to_idx:
-                        vocab_to_idx[char] = max(vocab_to_idx.values()) + 1
+                        len_vocab += 1
+                        vocab_to_idx[char] = len_vocab
                     truncated_review.append(vocab_to_idx[char])
-                input_data[position] = truncated_review
+
+                if number_of_padding:
+                    input_data[position] = truncated_review + [pad_index] * number_of_padding
+                else:
+                    input_data[position] = truncated_review
                 target_data[position] = 0
 
-    return dict(input_data=input_data, target_data=target_data)
+    return dict(input_data=input_data, target_data=target_data, sequence_len=char_len)
 
 
 batch_size = 100
@@ -116,6 +141,7 @@ learning_rate = 1e-2
 disp_step = 50
 saving_step = 10
 fc_neurons = 100
+num_layers = 2
 restore_model = False
 # whf = tf.Variable(tf.random_normal([max_chars*state_size, fc_neurons]), name='whf')          # weights from hidden layer to fc layer
 # bhf = tf.Variable(tf.random_normal([fc_neurons]), name='bhf')
@@ -127,11 +153,12 @@ init_hidden_state_h = tf.Variable(tf.random_normal([batch_size, state_size]), na
 
 x = tf.placeholder(tf.int32, [batch_size, max_chars], name='input_placeholder')
 y = tf.placeholder(tf.int32, [batch_size], name='labels_placeholder')
+seq_len = tf.placeholder(tf.int32, [batch_size], name='seq_len')
 
 
-x_one_hot = tf.one_hot(x, len_vocab)
-rnn_inputs = [tf.squeeze(i, squeeze_dims=[1]) for i in tf.split(x_one_hot, max_chars, 1)]
+rnn_inputs = tf.one_hot(x, len_vocab)
 cell = tf.contrib.rnn.BasicLSTMCell(state_size)
+# cell = tf.nn.rnn_cell.MultiRNNCell([cell] * num_layers)
 if restore_model:
     print("\nRestoring Model\n")
     with tf.Session() as sess:
@@ -161,14 +188,15 @@ else:
     print('Init state [0]', init_state[0])
 
 # init_state = tf.Variable(cell.zero_state(batch_size, tf.float32), name='init_state')
-rnn_outputs, final_state = tf.contrib.rnn.static_rnn(cell, rnn_inputs, initial_state=init_state)
+rnn_outputs, final_state = tf.nn.dynamic_rnn(cell, rnn_inputs, initial_state=init_state, sequence_length=seq_len)
 # rnn_outputs is a list of "number of inputs(or max_chars)" of rnn_output
 # shape of rnn_output is [batch_size, state_size]
 # logits has shape of [batch_size, num_classes]
 # Changing Shape of rnn_outputs to [batch_size, max_chars, state_size]
-rnn_output = tf.transpose(rnn_outputs, [1, 0, 2])
-print("RNN_outputs Shape ", len(rnn_outputs))
-dropped_rnn_output = tf.nn.dropout(rnn_output, keep_prob=0.75)
+# rnn_output = tf.transpose(rnn_outputs, [1, 0, 2])
+print("rnn_outputs shape ", rnn_outputs.get_shape().as_list())
+print('Final State shape', final_state)
+dropped_rnn_output = tf.nn.dropout(rnn_outputs, keep_prob=0.75)
 
 # Flattening output before connecting it to FC layer
 flatten_output = tf.reshape(dropped_rnn_output, [-1, whf.get_shape().as_list()[0]])
@@ -198,8 +226,7 @@ with tf.Session() as sess:
             # get next batch of data
             data_dict = next_batch(batch_size=batch_size)
             feed_dict = {x: data_dict['input_data'], y: data_dict['target_data']}
-            if len(training_state) != 0:
-                feed_dict[init_state] = training_state
+            feed_dict[seq_len] = data_dict['sequence_len']
             _, total_loss_data, training_state, disp_out_put = sess.run([optimizer, total_loss, final_state, out], feed_dict=feed_dict)
             tf.assign(ref=init_hidden_state_c, value=training_state[0])
             tf.assign(ref=init_hidden_state_h, value=training_state[1])
@@ -219,6 +246,7 @@ with tf.Session() as sess:
             for iterate_over_data in range(len(file_list_pos) // batch_size):
                 data_dict = next_batch(batch_size, test=True)
                 feed_dict2 = {x: data_dict['input_data'], y: data_dict['target_data']}
+                feed_dict2[seq_len] = data_dict['sequence_len']
                 acc += sess.run([accuracy], feed_dict=feed_dict2)[0]
             print('Accuracy in percentage: {0}'.format((acc / (len(file_list_pos) // batch_size)) * 100))
 
@@ -226,8 +254,7 @@ with tf.Session() as sess:
             # size of logits [num_char, batch_size, n_class]
             data_dict = next_batch(batch_size, test=True)
             feed_dict2 = {x: data_dict['input_data']}
-            if len(training_state) != 0:
-                feed_dict2[init_state] = training_state
+            feed_dict2[seq_len] = data_dict['sequence_len']
             prediction = sess.run([out], feed_dict=feed_dict2)
             batch_prediction = sess.run(tf.nn.softmax(prediction[0]))
             review = ''
