@@ -52,4 +52,3 @@ for each_file in file_list:
     # Break data into words
 
     # Convert data into standard lexicons
-    
