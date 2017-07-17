@@ -4,6 +4,7 @@ import numpy as np
 import html.parser
 import re
 import pickle
+import time
 
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
@@ -44,7 +45,6 @@ for each_file in file_list:
                     data = f.read()
 
     # PreProcess the data
-
     # Escape HTML char ir present
     html_parser = html.parser.HTMLParser()
     html_cleaned_data = html_parser.unescape(data)
@@ -112,7 +112,7 @@ vocab_frequency = data['vocab_frequency']
 vocab_len = len(data['vocab_to_index'])
 print('Vocab len: ', vocab_len)
 
-max_word = 200
+max_word = 50
 max_features = 20000
 file_pointer = 0
 def next_batch(batch_size, test=False):
@@ -149,7 +149,6 @@ def next_batch(batch_size, test=False):
     # Keep maximum frequent occurring words
     frequent_words_tuple = sorted(vocab_frequency.items(), key=lambda x: x[1], reverse=True)[:max_features]
     frequent_words = [val for val, freq in frequent_words_tuple]
-    print('Length of frequent words: ', frequent_words)
 
     for index, each_file in enumerate(pos_file_to_read+neg_file_to_read):
         if index % 5000 == 0:
@@ -185,9 +184,8 @@ def next_batch(batch_size, test=False):
         # Pad appropriately if less words are present
         word_len = len(truncated_review)
         if word_len < max_word:
-            truncated_review += [vocab_len] * (max_word - word_len)
+            truncated_review += [0] * (max_word - word_len)
         input_data[index] = truncated_review
-
     return (input_data, target_data)
 
 data_x, data_y = next_batch(25000)
