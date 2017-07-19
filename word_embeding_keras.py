@@ -1,3 +1,9 @@
+################################################################
+# Data for News corpus(Bellow link might help)
+# http://mpqa.cs.pitt.edu/
+# http://www.anc.org/data/oanc/download/
+
+
 from keras.preprocessing import sequence
 from keras.models import Sequential
 from keras.layers import Dense, Embedding
@@ -115,7 +121,6 @@ max_word = 50
 max_features = 20000
 batch_size = 32
 state_size = 128
-print(str)
 
 print('Build model...')
 model = Sequential()
@@ -150,5 +155,5 @@ sess = tf.Session()
 prediction = sess.run(tf.nn.softmax(prediction))
 # print(np.argmax(prediction))
 # print(data['target_data'])
-acc = np.sum(np.equal(np.argmax(prediction), data['target'][perm])) / len(data['target_data'])
+acc = np.sum(np.equal(np.argmax(prediction), data['target'][perm])) / len(data['target'])
 print(acc)
