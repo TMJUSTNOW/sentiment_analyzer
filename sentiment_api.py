@@ -20,7 +20,7 @@ def predict_sentiment(clean_string):
     max_features = 20000
     # evaluate loaded model on test data
     imdb_model.compile(loss='binary_crossentropy', optimizer='adagrad', metrics=['accuracy'])
-    frequent_words_tuple = sorted(vocab_frequency.items(), key=lambda x: x[1], reversed=True)[:max_features]
+    frequent_words_tuple = sorted(vocab_frequency.items(), key=lambda x: x[1], reverse=True)[:max_features]
     frequent_words = [val for val, freq in frequent_words_tuple]
     tokenized_word = word_tokenize(clean_string)
     input_data = np.zeros([1, max_word], dtype=np.int32)
@@ -35,14 +35,18 @@ def predict_sentiment(clean_string):
     input_data[0] = truncated_data
     prediction = imdb_model.predict(input_data)
     sess = tf.Session()
-    prediction = np.argmax(sess.run(tf.nn.softmax(prediction)), axis=1)
+    score = sess.run(tf.nn.softmax(prediction))
+    prediction = np.argmax(score, axis=1)
     stri = ''
     for idx in input_data[0]:
+        if idx == 0:
+            continue
         stri += ' ' + index_to_vocab[idx]
     if prediction == 0:
         print('Sentiment Detected Negetive')
     elif prediction == 1:
         print('Sentiment Detected Positive')
+    print('With a score of Negative: {0}% and positive: {1}%'.format(int(score[0][0]*100), int(score[0][1]*100)))
     print('Words Used for Prediction:  {0}'.format(stri))
 
 def attach_model():
