@@ -7,10 +7,6 @@ import tensorflow as tf
 
 
 
-
-
-
-
 def predict_sentiment(clean_string):
 
     vocab_to_index, index_to_vocab, vocab_frequency = load_vocab()
@@ -46,7 +42,7 @@ def predict_sentiment(clean_string):
         print('Sentiment Detected Negetive')
     elif prediction == 1:
         print('Sentiment Detected Positive')
-    print('With a score of Negative: {0}% and positive: {1}%'.format(int(score[0][0]*100), int(score[0][1]*100)))
+    print('With a score of -Ve: {0}% +Ve: {1}%'.format(int(score[0][0]*100), int(score[0][1]*100)))
     print('Words Used for Prediction:  {0}'.format(stri))
 
 def attach_model():
@@ -62,7 +58,7 @@ def attach_model():
     return loaded_model
 
 def load_vocab():
-    with open('data/movie_vocab.pkl', 'rb') as f:
+    with open('data/movie_vocab2.pkl', 'rb') as f:
         data = pickle.load(f)
     vocab_to_index = data['vocab_to_index']
     index_to_vocab = data['index_to_vocab']

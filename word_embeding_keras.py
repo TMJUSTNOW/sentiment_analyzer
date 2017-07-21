@@ -15,6 +15,7 @@ import tensorflow as tf
 
 import pickle
 import os
+import time
 
 
 print('Loading data...')
@@ -24,7 +25,7 @@ with open('data/movie_vocab.pkl', 'rb') as f:
 print(len(data['vocab_to_index']))
 vocab_to_index = data['vocab_to_index']
 index_to_vocab = data['index_to_vocab']
-vocab_frequency = data['vocab_frequency']
+vocab_frequency_tuple = data['vocab_frequency_tuple']
 vocab_len = len(data['vocab_to_index'])
 print('Vocab len: ', vocab_len)
 # del data
@@ -120,24 +121,32 @@ print('Vocab len: ', vocab_len)
 max_word = 50
 max_features = 20000
 batch_size = 32
-state_size = 128
+state_size = 50
 
 print('Build model...')
 model = Sequential()
 model.add(Embedding(max_features, 128))
 model.add(LSTM(state_size, dropout=0.2, recurrent_dropout=0.2))
-# model.add(Dense(2))
-model.add(Dense(1, activation='sigmoid'))
+model.add(Dense(2, activation='softmax'))
+# model.add(Dense(1, activation='sigmoid'))
 
 # try using different optimizers and different optimizer configs
-# model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+# model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 print('Train...')
 with open('data/train.pkl', 'rb') as f:
     data = pickle.load(f)
 perm = np.arange(len(data['input']))
 np.random.shuffle(perm)
+print(data['input'].max(1).max())
+stri = ''
+ind = 5000
+print('Data\n', data['input'][ind])
+for indx in data['input'][ind]:
+    stri += ' ' + index_to_vocab[indx]
+print(stri)
+time.sleep(100)
 
 print("Data Loaded")
 model.fit(data['input'][perm], data['target'][perm], batch_size=batch_size, epochs=2, validation_split=0.3)
