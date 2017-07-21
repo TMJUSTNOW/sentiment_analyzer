@@ -122,6 +122,7 @@ max_word = 50
 max_features = 20000
 batch_size = 32
 state_size = 50
+n_classes = 2
 
 print('Build model...')
 model = Sequential()
@@ -140,21 +141,24 @@ with open('data/train.pkl', 'rb') as f:
 perm = np.arange(len(data['input']))
 np.random.shuffle(perm)
 print(data['input'].max(1).max())
-stri = ''
-ind = 5000
-print('Data\n', data['input'][ind])
-for indx in data['input'][ind]:
-    stri += ' ' + index_to_vocab[indx]
-print(stri)
-time.sleep(100)
+# stri = ''
+# ind = 3000
+# print('Data\n', data['input'][ind])
+# for indx in data['input'][ind]:
+#     stri += ' ' + index_to_vocab[indx]
+# print(stri)
+# time.sleep(100)
 
 print("Data Loaded")
-model.fit(data['input'][perm], data['target'][perm], batch_size=batch_size, epochs=2, validation_split=0.3)
+sess = tf.Session()
+target = sess.run(tf.one_hot(data['target'][perm], n_classes))
+model.fit(data['input'][perm], target, batch_size=batch_size, epochs=2, validation_split=0.3)
 
 print('Test...')
 with open('data/test.pkl', 'rb') as f:
     data = pickle.load(f)
-score, acc = model.evaluate(data['input'][perm], data['target'][perm], batch_size=batch_size)
+target = sess.run(tf.one_hot(data['target'][perm], n_classes))
+score, acc = model.evaluate(data['input'][perm], target, batch_size=batch_size)
 
 
 print('Score {0} acc {1}'.format(score, acc))
