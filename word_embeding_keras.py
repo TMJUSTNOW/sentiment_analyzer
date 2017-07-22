@@ -6,8 +6,7 @@
 
 from keras.preprocessing import sequence
 from keras.models import Sequential
-from keras.layers import Dense, Embedding
-from keras.layers import LSTM
+from keras.layers import Dense, Embedding, Masking, LSTM
 from keras.datasets import imdb
 import numpy as np
 from nltk.tokenize import word_tokenize
@@ -20,7 +19,7 @@ import time
 
 print('Loading data...')
 # (x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=max_features)
-with open('data/movie_vocab.pkl', 'rb') as f:
+with open('/home/janmejaya/sentiment_files/data/movie_vocab.pkl', 'rb') as f:
     data = pickle.load(f)
 print(len(data['vocab_to_index']))
 vocab_to_index = data['vocab_to_index']
@@ -126,7 +125,8 @@ n_classes = 2
 
 print('Build model...')
 model = Sequential()
-model.add(Embedding(max_features, 128))
+model.add(Masking(mask_value=0, input_shape=(max_word, )))
+model.add(Embedding(max_features, 2000))
 model.add(LSTM(state_size, dropout=0.2, recurrent_dropout=0.2))
 model.add(Dense(2, activation='softmax'))
 # model.add(Dense(1, activation='sigmoid'))
@@ -136,7 +136,7 @@ model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accur
 # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 print('Train...')
-with open('data/train.pkl', 'rb') as f:
+with open('/home/janmejaya/sentiment_files/data/train.pkl', 'rb') as f:
     data = pickle.load(f)
 perm = np.arange(len(data['input']))
 np.random.shuffle(perm)
@@ -152,10 +152,11 @@ print(data['input'].max(1).max())
 print("Data Loaded")
 sess = tf.Session()
 target = sess.run(tf.one_hot(data['target'][perm], n_classes))
-model.fit(data['input'][perm], target, batch_size=batch_size, epochs=2, validation_split=0.3)
+# input_data = sess.run(tf.one_hot(data['input'][perm], max_features))
+model.fit(data['input'][perm], target, batch_size=batch_size, epochs=5, validation_split=0.3)
 
 print('Test...')
-with open('data/test.pkl', 'rb') as f:
+with open('/home/janmejaya/sentiment_files/data/test.pkl', 'rb') as f:
     data = pickle.load(f)
 perm = np.arange(len(data['input']))
 np.random.shuffle(perm)
@@ -175,7 +176,7 @@ print(acc)
 
 # serialize model to JSON
 model_json = model.to_json()
-with open('model/imdb_lstm.json', "w") as json_file:
+with open('/home/janmejaya/sentiment_files/model/imdb_lstm.json', "w") as json_file:
     json_file.write(model_json)
 # serialize weights to HDF5
 model.save_weights("model/imdb_lstm.h5")
