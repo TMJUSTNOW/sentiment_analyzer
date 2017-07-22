@@ -119,7 +119,7 @@ print('Vocab len: ', vocab_len)
 
 
 max_word = 50
-max_features = 20000
+max_features = 20001
 batch_size = 32
 state_size = 50
 n_classes = 2
@@ -157,6 +157,8 @@ model.fit(data['input'][perm], target, batch_size=batch_size, epochs=2, validati
 print('Test...')
 with open('data/test.pkl', 'rb') as f:
     data = pickle.load(f)
+perm = np.arange(len(data['input']))
+np.random.shuffle(perm)
 target = sess.run(tf.one_hot(data['target'][perm], n_classes))
 score, acc = model.evaluate(data['input'][perm], target, batch_size=batch_size)
 
@@ -170,3 +172,11 @@ prediction = sess.run(tf.nn.softmax(prediction))
 # print(data['target_data'])
 acc = np.sum(np.equal(np.argmax(prediction), data['target'][perm])) / len(data['target'])
 print(acc)
+
+# serialize model to JSON
+model_json = model.to_json()
+with open('model/imdb_lstm.json', "w") as json_file:
+    json_file.write(model_json)
+# serialize weights to HDF5
+model.save_weights("model/imdb_lstm.h5")
+print("Saved model to disk")
