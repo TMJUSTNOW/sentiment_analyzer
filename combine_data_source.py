@@ -14,9 +14,9 @@ from nltk.corpus import wordnet
 import pandas as pd
 
 
-df = pd.read_csv('/home/john/geek_stuff/Data Set/Twitter Sentiment 3 class/training.1600000.processed.noemoticon.csv',
-                                                                                                    encoding='latin-1')
-df.columns = ['target', 'NR1', 'NR2', 'NR3', 'NR4', 'data']
+df = pd.DataFrame.from_csv('/home/janmejaya/Downloads/train.tsv', sep='\t', header=0)
+print(df.columns)
+
 
 def get_wordnet_pos(treebank_tag):
 
@@ -35,7 +35,17 @@ word_lemmatizer = WordNetLemmatizer()
 
 vocab_frequency = {}
 len_vocab = 0
-for data in df['data']:
+sentense_list = df['SentenceId'].tolist()
+sentiment_list = df['Sentiment'].tolist()
+sentence_id = []
+for idx, data in enumerate(df['Phrase'].tolist()):
+    if sentense_list[idx] in sentence_id:
+        continue
+    else:
+        sentence_id.append(sentense_list[idx])
+    if sentiment_list[idx] not in [0, 4]:
+        continue
+
     # Escape HTML char ir present
     html_parser = html.parser.HTMLParser()
     html_cleaned_data = html_parser.unescape(data)
@@ -58,12 +68,12 @@ for data in df['data']:
                   'or', 'having', 'now', 'too', 'on', 'and', 'through', 'she', 'his', 'do', 'there', 'won', 'they',
                   'to', 'are', 't', 'few', 'was', 'it', 'did', 'himself', 'her', 'such', 'have', 'yours', 'more', 'for',
                   're', 'will', 'ain', 's', 'you', 'their', 'about', 'between', 'that', 'once', 'does', 'shall', 've',
-                  'he', 'of', 'y', 'own', 'again', 'd', 'any', 'does', 'was', 'its', 'below', 'hers', 'yourself']
-    movie_stop_words = ['actors', 'actor', 'dvd', 'story', 'villain', 'acting', 'u', 'family', 'oh', 'cinematic',
-                        'dialogue', 'hm', 'chynna', 'bogarde', 'shampoo', 'painfulbr', 'coolio', 'musclebound',
+                  'he', 'of', 'y', 'own', 'again', 'tale','idea','watch', 'd', 'any', 'does', 'was', 'its', 'below', 'hers', 'yourself']
+    movie_stop_words = ['actors', 'actor', 'experience', 'picture', 'entertaining', 'screen', 'script', 'dvd', 'story', 'audience', 'documentary', 'villain', 'acting', 'u', 'family', 'oh', 'cinematic',
+                        'dialogue', 'hm', 'chynna','filmmaker', 'play', 'fan', 'imagine', 'viewer', 'screenplay', 'camera', 'word', 'feature', 'effect', 'original','filmmaking' ,'bogarde', 'action', 'ca', 'shampoo', 'cast', 'painfulbr', 'coolio', 'musclebound',
                         'baloney', 'hairline', 'joe', 'sexy', 'japanese', 'think', 'cinematography', 'father', 'say',
-                        'studio', 'boy', 'direction', 'cinema', 'friend', 'writ', 'movies', 'american', 'actress',
-                        'classic', 'star', 'directed', 'bor', 'title', 'human', 'enterta', 'ett', 'production',
+                        'studio', 'boy', 'direction', 'cinema', 'friend', 'writ', 'movies', 'visual', 'american', 'actress',
+                        'classic', 'star', 'directed', 'bor', 'title', 'human', 'enterta', 'kid', 'series', 'comic', 'narrative', 'ett', 'production',
                         'performances', 'films', 'characters', 'character', 'tv', 'main', 'sense', 'woman', 'girl',
                         'scenes', 'terest', 'scene', 'mak', 'director', 'ive', 'back', 'th', 'chemistry', 'bill', 'lee',
                         'audiences', 'producers', 'filmed', 'review', 'song', 'musical', 'songs', 'thriller', 'theater',
@@ -71,7 +81,7 @@ for data in df['data']:
                         'viewers', 'dr', 'era', 'stefan', 'jrs', 'mar', 'palestinian', 'gandolfini', 'elisha', 'taboos',
                         'jessie', 'hindu', 'gandolfini', 'gandolfini', 'water', 'de', 'mov', 'moviebr', 'robert', 'v',
                         'liv', 'david', 'w', 'la', 'sitt', 'volv', 'tak', 'michael', 'ope', 'mr', 'hour', 'movie',
-                        'music', 'film', 'two', 'th', 'youre', 'john', 'bor', 'ett', 'hollywood', 'drama', 'theyre',
+                        'music', 'film', 'two','nt', 'th', 'rrb', 'lrb','youre', 'john', 'bor', 'ett', 'hollywood', 'drama', 'theyre',
                         'yeah', 'com', 'itbr', 'genre']
 
     # Performing Word Lemmatization on text
@@ -99,3 +109,4 @@ for data in df['data']:
 frequent_words_tuple = sorted(vocab_frequency.items(), key=lambda x: x[1], reverse=True)
 frequent_words = [val for val, freq in frequent_words_tuple][:1000]
 print(frequent_words)
+print(frequent_words_tuple[:1000])
