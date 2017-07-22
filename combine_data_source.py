@@ -51,19 +51,19 @@ for data in df['data']:
                   'world', 'could', 'yourselves', 'us', 'actually', 'years', 'man', 'im', 'with', 'only', 'is', 'had',
                   'll', 'into', 'being', 'a', 'me', 'has', 'been', 'why', 'where', 'up', 'can', 'than', 'in', 'sex',
                   'days', 'from', 'who', 'the', 'should', 'your', 'themselves', 'while', 'we', 'against', 'further',
-                  'these', 'those', 'were', 'be', 'out', 'him', 'our', 'which', 'just', 'doing', 'this', 'had',
-                  'theirs', 'i', 'under', 'm', 'herself', 'by', 'at', 'until', 'here', 'were', 'if', 'myself', 'ma',
-                  'ours', 'as', 'all', 'each', 'how', 'when', 'other', 'itself', 'an', 'my', 'did', 'them', 'ourselves',
-                  'during', 'whom', 'am', 'o', 'same', 'are', 'have', 'above', 'what', 'both', 'do', 'off', 'before',
-                  'or', 'having', 'now', 'too', 'on', 'and', 'through', 'she', 'his', 'do', 'there', 'won', 'they',
-                  'to', 'are', 't', 'few', 'was', 'it', 'did', 'himself', 'her', 'such', 'have', 'yours', 'more', 'for',
-                  're', 'will', 'ain', 's', 'you', 'their', 'about', 'between', 'that', 'once', 'does', 'shall', 've',
-                  'he', 'of', 'y', 'own', 'again', 'd', 'any', 'does', 'was', 'its', 'below', 'hers', 'yourself']
-    movie_stop_words = ['actors', 'actor', 'dvd', 'story', 'villain', 'acting', 'u', 'family', 'oh', 'cinematic',
-                        'dialogue', 'hm', 'chynna', 'bogarde', 'shampoo', 'painfulbr', 'coolio', 'musclebound',
-                        'baloney', 'hairline', 'joe', 'sexy', 'japanese', 'think', 'cinematography', 'father', 'say',
-                        'studio', 'boy', 'direction', 'cinema', 'friend', 'writ', 'movies', 'american', 'actress',
-                        'classic', 'star', 'directed', 'bor', 'title', 'human', 'enterta', 'ett', 'production',
+                  'these', 'those', 'were', 'be', 'out', 'him', 'our', 'which', 'yo', 'jus', 'piss', 'daughter', 'cup', 'wit', 'just', 'box', 'note', 'tom', 'myspace', 'service', 'cheer', 'raining', 'road', 'rainy', 'window', 'tummy','doing', 'this', 'had',
+                  'theirs', 'i', 'under', 'm', 'herself', 'club','bitch', 'interview', 'yummy', 'type', 'bbq', 'apple', 'graduation', 'by', 'at', 'until', 'here','officially', 'case', 'idk', 'bike', 'itll', 'garden', 'sims', 'leg', 'boyfriend', 'camera', 'jonasbrothers', 'son', 'were', 'if', 'myself', 'ma',
+                  'ours', 'as', 'all', 'each', 'how', 'when', 'other', 'itself', 'an','thursday', 'ahhh', 'miley', 'my', 'did', 'them', 'ourselves',
+                  'during', 'whom', 'am', 'o', 'same', 'are', 'number', 'jonas', 'bc','french', 'business', 'yup', 'tuesday', 'have','ipod', 'above', 'what', 'both', 'do', 'off', 'before',
+                  'or', 'having', 'now', 'too', 'on', 'and', 'town', 'cd', 'company', 'xoxo', 'doctor', 'wedding', 'dm', 'wednesday', 'twilight', 'luv', 'notice', 'ps', 'smell', 'front', 'hubby', 'shot', 'through', 'ppl', 'mood','meeting', 'lil', 'she', 'his', 'do', 'bday', 'laptop', 'youtube', 'church', 'side','mother','homework', 'goin', 'tour', 'lady', 'there', 'won', 'they',
+                  'to', 'are', 't', 'few', 'was','woo', 'gym', 'shirt', 'wed', 'ache', 'si', 'chicken', 'goodbye', 'yr', 'g', 'pizza', 'talk', 'today', 'hows', 'c','mum', 'episode', 'sleepy', 'hr', 'via', 'xxx','london', 'ahh', 'chocolate','phone', 'date','red','city', 'soooo', 'nite', 'xd', 'ice','bout','it', 'did', 'june','cat', 'afternoon', 'tommcfly', 'hop', 'lmao', 'himself','facebook', 'aw', 'fix', 'asleep', 'her', 'such', 'have', 'yours', 'more', 'for',
+                  're', 'will', 'ain', 's', 'you', 'l', 'pink', 'search', 'gettin','ouch', 'bum', 'cousin', 'uk','stomach', 'shoe', 'google', 'their', 'yall', 'fb','team', 'flu', 'thx', 'wtf', 'voice', 'annoy', 'finger', 'mtv', 'math', 'followfriday', 'yep', 'download', 'bye', 'rain', 'about', 'between', 'wan', 'hug', 'season','tweet', 'hey','weekend', 'that', 'once', 'does', 'shall', 've',
+                  'he', 'of', 'y', 'own', 'again', 'd', 'sun','due', 'em', 'mac', 'page', 'yea', 'message', 'any', 'game', 'hehe', 'st', 'train', 'til', 'ticket','pic', 'study','damn','morning', 'tonight', 'thing','twitter', 'haha', 'tomorrow', 'does', 'was', 'its', 'below', 'hers', 'yourself']
+    movie_stop_words = ['actors', 'actor', 'dvd', 'omg', 'wow', 'exam', 'cold','okay','parent', 'k', 'e', 'project', 'hmm', 'website', 'da', 'hat', 'youve', 'tho', 'weather', 'hi', 'car', 'post', 'friday', 'kid', 'sunday', 'party','read', 'story', 'x','ur', 'lol', 'yay', 'night', 'na', 'gon', 'villain', 'acting', 'u', 'family', 'oh', 'cinematic',
+                        'dialogue', 'hm', 'chynna', 'bogarde', 'ya', 'photo', 'ah', 'place', 'picture','ddlovato','p', 'fuck', 'shit', 'plan', 'iphone', 'video', 'month', 'aww','ta', 'n', 'yesterday', 'mom', 'ugh',  'shampoo', 'painfulbr', 'coolio', 'musclebound',
+                        'baloney', 'hairline', 'joe','blog', 'email', 'mileycyrus','breakfast', 'dude', 'shower', 'dance', 'visit', 'wear', 'site', 'pick', 'ha', 'concert', 'online', 'sexy', 'soo','sister', 'internet', 'boo', 'btw', 'news', 'japanese', 'r', 'name','drink','b', 'hahaha', 'monday', 'think', 'cinematography', 'father', 'say',
+                        'studio', 'boy', 'direction', 'cinema', 'pm', 'friend', 'word', 'awww', 'goodnight', 'trip', 'writ', 'movies', 'american', 'actress',
+                        'classic', 'star', 'directed', 'bor', 'title', 'coffee', 'sooo', 'kinda', 'beach', 'dog', 'saturday','xx', 'dad', 'human', 'enterta', 'ett', 'production',
                         'performances', 'films', 'characters', 'character', 'tv', 'main', 'sense', 'woman', 'girl',
                         'scenes', 'terest', 'scene', 'mak', 'director', 'ive', 'back', 'th', 'chemistry', 'bill', 'lee',
                         'audiences', 'producers', 'filmed', 'review', 'song', 'musical', 'songs', 'thriller', 'theater',
@@ -99,3 +99,4 @@ for data in df['data']:
 frequent_words_tuple = sorted(vocab_frequency.items(), key=lambda x: x[1], reverse=True)
 frequent_words = [val for val, freq in frequent_words_tuple][:1000]
 print(frequent_words)
+print(frequent_words_tuple[:1000])
