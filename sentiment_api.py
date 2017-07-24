@@ -9,15 +9,14 @@ import tensorflow as tf
 
 def predict_sentiment(clean_string):
 
-    vocab_to_index, index_to_vocab, vocab_frequency = load_vocab()
+    vocab_to_index, index_to_vocab, vocab_frequency_tuple = load_vocab()
     imdb_model = attach_model()
     # Model Parameters
-    max_word = 50
-    max_features = 20000
+    max_word = 10
+    max_features = 1001
     # evaluate loaded model on test data
     imdb_model.compile(loss='binary_crossentropy', optimizer='adagrad', metrics=['accuracy'])
-    frequent_words_tuple = sorted(vocab_frequency.items(), key=lambda x: x[1], reverse=True)[:max_features]
-    frequent_words = [val for val, freq in frequent_words_tuple]
+    frequent_words = [val for val, freq in vocab_frequency_tuple][:max_features]
     tokenized_word = word_tokenize(clean_string)
     input_data = np.zeros([1, max_word], dtype=np.int32)
     truncated_data = []
@@ -47,22 +46,22 @@ def predict_sentiment(clean_string):
 
 def attach_model():
     # load json and create model
-    with open('model/imdb_lstm.json', 'r') as json_file:
+    with open('/home/janmejaya/sentiment_files/model/rotten_movie_model.json', 'r') as json_file:
         loaded_model_json = json_file.read()
 
     loaded_model = model_from_json(loaded_model_json)
     # load weights into new model
-    loaded_model.load_weights("model/imdb_lstm.h5")
+    loaded_model.load_weights("/home/janmejaya/sentiment_files/model/rotten_movie_model.h5")
     print("Loaded model from disk")
 
     return loaded_model
 
 def load_vocab():
-    with open('data/movie_vocab2.pkl', 'rb') as f:
+    with open('/home/janmejaya/sentiment_files/data/rotten_movie_vocab.pkl', 'rb') as f:
         data = pickle.load(f)
     vocab_to_index = data['vocab_to_index']
     index_to_vocab = data['index_to_vocab']
-    vocab_frequency = data['vocab_frequency']
+    vocab_frequency = data['vocab_frequency_tuple']
 
     return (vocab_to_index, index_to_vocab, vocab_frequency)
 
