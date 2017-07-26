@@ -1,10 +1,27 @@
 import os
 import pickle
+import time
 
 from keras.models import model_from_json
 import numpy as np
 from nltk.tokenize import word_tokenize
 import tensorflow as tf
+
+
+
+with open('/home/john/sentiment_files/data/complete_data/complete_train1.pkl', 'rb') as f:
+    data = pickle.load(f)
+
+print('Input data shape ', data['input'].shape)
+print('Target data shape ', data['target'].shape)
+print('input data \n', data['input'][:3])
+print('input data \n', data['target'][:3])
+time.sleep(1000)
+
+
+
+
+
 
 
 print('Loading data...')
