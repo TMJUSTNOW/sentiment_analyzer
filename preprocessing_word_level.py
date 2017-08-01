@@ -11,6 +11,7 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.corpus import wordnet
+import enchant
 
 # Read data set(IMDB Review data)
 train_pos_sample_dir = '/home/john/geek_stuff/Data Set/IMDB_sentiment_analysis_data/aclImdb/train/pos'
@@ -88,17 +89,16 @@ word_lemmatizer = WordNetLemmatizer()
 #             lemmatized_data.append(word_lemmatizer.lemmatize(word))
 #
 #     filtered_sentences = [w.strip(' ').lower() for w in lemmatized_data if w.strip(' ').lower() not in stop_words+movie_stop_words]
-#     if 'be' in filtered_sentences or 'o' in filtered_sentences or 'or' in filtered_sentences or 'br' in filtered_sentences:
-#         print(lemmatized_data)
-#         print(filtered_sentences)
-#         print('\n\n')
-#         time.sleep(10)
 #
+#     # Remove all non-english or mis-spelled words
+#     # Using Hunspell (install pyhunspell and install required dictionary for hunspell)
+#     enchant_dict = enchant.Dict("en_US")
+#     correct_spell_word = [word for word in filtered_sentences if enchant_dict.check(word)]
 #
 #
 #     # TODO: Add low frequency words from classes
 #     # create word to index and index to word dictionary
-#     vocab = set(filtered_sentences)
+#     vocab = set(correct_spell_word)
 #     for indx, val in enumerate(vocab):
 #         # if val not in vocab_to_idx:
 #         #     vocab_to_idx[val] = len_vocab + index_to_start
@@ -131,7 +131,7 @@ word_lemmatizer = WordNetLemmatizer()
 #     idx += 1
 # print('Saving Dictionary')
 # dictionary = {'vocab_to_index': vocab_to_idx, 'index_to_vocab': idx_to_vocab, 'vocab_frequency_tuple': frequent_words_tuple}
-# with open('data/movie_vocab.pkl', 'wb') as f:
+# with open('/home/john/sentiment_files/data/movie_vocab.pkl', 'wb') as f:
 #     pickle.dump(dictionary, f)
 
 
@@ -139,17 +139,17 @@ word_lemmatizer = WordNetLemmatizer()
 # Convert data in to index and store it
 print('Loading data...')
 # (x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=max_features)
-with open('/home/john/sentiment_files/data/complete_vocab_15_word.pkl', 'rb') as f:
+with open('/home/john/sentiment_files/data/movie_vocab.pkl', 'rb') as f:
     data = pickle.load(f)
 vocab_to_index = data['vocab_to_index']
 index_to_vocab = data['index_to_vocab']
 vocab_frequency_tuple = data['vocab_frequency_tuple']
-vocab_len = len(data['vocab_to_index'])
+vocab_len = len(data['vocab_frequency_tuple'])
 print('Vocab len: ', vocab_len)
 print("Len of vocab freq tuple ", len(vocab_frequency_tuple))
 
 max_word = 15
-max_features = 25000
+max_features = len(data['vocab_frequency_tuple']) + 1
 file_pointer = 0
 def next_batch(batch_size, test=False):
     # This function reads equal amount of positive and negative review depending on batch size.
@@ -261,7 +261,7 @@ def next_batch(batch_size, test=False):
 # train_dict = {'input': data_x, 'target': data_y}
 # print('Input shape ', data_x.shape)
 # print('Target shape ', data_y.shape)
-# with open('/home/john/sentiment_files/data/complete_data_15_word/complete_train4.pkl', 'wb') as f:
+# with open('/home/john/sentiment_files/data/train.pkl', 'wb') as f:
 #     pickle.dump(train_dict, f)
 
 data_x, data_y = next_batch(len(file_list), test=True)
@@ -269,5 +269,5 @@ test_dict = {'input': data_x, 'target': data_y}
 print('Max value in test: ', test_dict['input'].max(1).max())
 print('Input shape ', data_x.shape)
 print('Target shape ', data_y.shape)
-with open('/home/john/sentiment_files/data/complete_data_15_word/complete_test.pkl', 'wb') as f:
+with open('/home/john/sentiment_files/data/test.pkl', 'wb') as f:
     pickle.dump(test_dict, f)

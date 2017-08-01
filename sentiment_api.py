@@ -1,28 +1,63 @@
 import pickle
+import time
+import re
 
+from line_profiler import LineProfiler
 from keras.models import model_from_json
 from nltk.tokenize import word_tokenize
 import numpy as np
 import tensorflow as tf
+from nltk.corpus import wordnet
+import nltk
+from nltk.stem.wordnet import WordNetLemmatizer
+
+##### Analyze these sntence
+#indian bank write percent value bad loan large stress asset account hit billion rating agency
+# indian benchmark gain most over week lead company
+# lg electronics inc thursday continued loss mobile unit limited growth profit percent firm prepare release
+# stock jump nearly percent optical maker report rise percent rs period end june drive strong
 
 
+
+def get_wordnet_pos(treebank_tag):
+
+    if treebank_tag.startswith('J'):
+        return wordnet.ADJ
+    elif treebank_tag.startswith('V'):
+        return wordnet.VERB
+    elif treebank_tag.startswith('N'):
+        return wordnet.NOUN
+    elif treebank_tag.startswith('R'):
+        return wordnet.ADV
+    else:
+        return ''
 
 def predict_sentiment(clean_string):
 
     vocab_to_index, index_to_vocab, vocab_frequency_tuple = load_vocab()
     imdb_model = attach_model()
     # Model Parameters
-    max_word = 10
-    max_features = 1001
+    max_word = 15
+    max_features = 25000
     # evaluate loaded model on test data
     imdb_model.compile(loss='binary_crossentropy', optimizer='adagrad', metrics=['accuracy'])
     frequent_words = [val for val, freq in vocab_frequency_tuple][:max_features]
-    tokenized_word = word_tokenize(clean_string)
+    word_lemmatizer = WordNetLemmatizer()
+    clean_string = re.sub('[^A-Za-z ]+', '', clean_string)
     input_data = np.zeros([1, max_word], dtype=np.int32)
+    lemmatized_data = []
+    for word, typ in nltk.pos_tag(word_tokenize(clean_string)):
+        typ = get_wordnet_pos(typ)
+        if typ:
+            lemmatized_data.append(word_lemmatizer.lemmatize(word, typ))
+        else:
+            lemmatized_data.append(word_lemmatizer.lemmatize(word))
     truncated_data = []
-    for each_word in tokenized_word:
+    for each_word in list(map(str.lower, lemmatized_data)):
         if each_word in frequent_words:
             truncated_data.append(vocab_to_index[each_word])
+            if len(truncated_data) >= max_word:
+                break
     # Perform Extra Padding
     if len(truncated_data) < max_word:
         truncated_data += [0] * (max_word - len(truncated_data))
@@ -37,21 +72,26 @@ def predict_sentiment(clean_string):
         if idx == 0:
             continue
         stri += ' ' + index_to_vocab[idx]
-    if prediction == 0:
-        print('Sentiment Detected Negetive')
-    elif prediction == 1:
-        print('Sentiment Detected Positive')
+
     print('With a score of -Ve: {0}% +Ve: {1}%'.format(int(score[0][0]*100), int(score[0][1]*100)))
+    if abs(score[0][0] - score[0][1]) <= 0.15:
+        print('Detected Sentiment Neutral')
+    else:
+        prediction = np.argmax(score, axis=1)
+        if prediction == 0:
+            print('Sentiment Detected Negative')
+        elif prediction == 1:
+            print('Sentiment Detected Positive')
     print('Words Used for Prediction:  {0}'.format(stri))
 
 def attach_model():
     # load json and create model
-    with open('/home/janmejaya/sentiment_files/model/rotten_movie_model.json', 'r') as json_file:
+    with open('/home/john/sentiment_files/model/complete_sentiment_15_word.json', 'r') as json_file:
         loaded_model_json = json_file.read()
 
     loaded_model = model_from_json(loaded_model_json)
     # load weights into new model
-    loaded_model.load_weights("/home/janmejaya/sentiment_files/model/rotten_movie_model.h5")
+    loaded_model.load_weights("/home/john/sentiment_files/model/complete_sentiment_15_word.h5")
     print("Loaded model from disk")
 
     return loaded_model
@@ -62,10 +102,13 @@ def load_vocab():
     vocab_to_index = data['vocab_to_index']
     index_to_vocab = data['index_to_vocab']
     vocab_frequency = data['vocab_frequency_tuple']
+    print('Len of vocab frequency ', len(vocab_frequency))
 
     return (vocab_to_index, index_to_vocab, vocab_frequency)
 
 
 if __name__ == '__main__':
     data = input('Provide sentence for sentiment Prediction:\n')
+    start = time.time()
     predict_sentiment(clean_string=data)
+    print('Time taken {0}'.format(time.time() - start))

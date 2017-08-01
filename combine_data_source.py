@@ -13,6 +13,7 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.corpus import wordnet
 import pandas as pd
 import collections
+import hunspell
 
 
 df = pd.read_csv('/home/john/geek_stuff/Data Set/Twitter_Sentiment_3_class/training.1600000.processed.noemoticon.csv', encoding='latin-1', header=None)
@@ -156,81 +157,11 @@ def get_wordnet_pos(treebank_tag):
 word_lemmatizer = WordNetLemmatizer()
 
 vocab_frequency = {}
-len_vocab = 0
 sentiment_list = df['target'].tolist()
 print(len(sentiment_list))
 sentence_id = []
-# for idx, data in enumerate(df['data'].tolist()):
-#
-#     # Escape HTML char ir present
-#     html_parser = html.parser.HTMLParser()
-#     html_cleaned_data = html_parser.unescape(data)
-#
-#     # Keep important punctuation
-#     html_cleaned_data = re.sub('[^A-Za-z ]+', '', html_cleaned_data)
-#
-#     # Performing Word Lemmatization on text
-#     lemmatized_data = []
-#     for word, typ in nltk.pos_tag(word_tokenize(html_cleaned_data)):
-#         typ = get_wordnet_pos(typ)
-#         if typ:
-#             lemmatized_data.append(word_lemmatizer.lemmatize(word, typ))
-#         else:
-#             lemmatized_data.append(word_lemmatizer.lemmatize(word))
-#
-#     filtered_sentences = [w.strip(' ').lower() for w in lemmatized_data if
-#                           w.strip(' ').lower() not in stop_words + movie_stop_words]
-#
-#     # create word to index and index to word dictionary
-#     vocab = set(filtered_sentences)
-#     for indx, val in enumerate(vocab):
-#         # Count frequency of the Word
-#         if val in vocab_frequency:
-#             vocab_frequency[val] += 1
-#         else:
-#             vocab_frequency[val] = 1
-#             len_vocab += 1
-#
-# frequent_words_tuple = sorted(vocab_frequency.items(), key=lambda x: x[1], reverse=True)
-# frequent_words = [val for val, freq in frequent_words_tuple][:1000]
-# print(frequent_words)
-# print(frequent_words_tuple[:1000])
-# print('Len of vocab ', len_vocab)
-# # print(collections.Counter(word_len))
-# idx = 1
-# vocab_to_idx, idx_to_vocab = {}, {}
-# vocab_to_idx['<pad>'] = 0
-# idx_to_vocab[0] = '<pad>'
-# for val, freq in frequent_words_tuple:
-#     vocab_to_idx[val] = idx
-#     idx_to_vocab[idx] = val
-#     idx += 1
-# print('Saving Dictionary')
-# dictionary = {'vocab_to_index': vocab_to_idx, 'index_to_vocab': idx_to_vocab, 'vocab_frequency_tuple': frequent_words_tuple}
-# with open('/home/john/sentiment_files/data/twitter_vocab.pkl', 'wb') as f:
-#     pickle.dump(dictionary, f)
-
-# Convert data in to index and store it
-print('Loading data...')
-with open('/home/john/sentiment_files/data/complete_vocab_15_word.pkl', 'rb') as f:
-    data = pickle.load(f)
-vocab_to_index = data['vocab_to_index']
-index_to_vocab = data['index_to_vocab']
-vocab_frequency_tuple = data['vocab_frequency_tuple']
-vocab_len = len(data['vocab_to_index'])
-print('Vocab len: ', vocab_len)
-
-max_word = 15
-max_features = 25000
-count = 0
-target_data = []
-input_data = np.array([], int)
-counter = 0
 for idx, data in enumerate(df['data'].tolist()):
-    if sentiment_list[idx] not in [0, 4]:
-        continue
-    if idx % 10000 == 0:
-        print(idx)
+
     # Escape HTML char ir present
     html_parser = html.parser.HTMLParser()
     html_cleaned_data = html_parser.unescape(data)
@@ -247,61 +178,137 @@ for idx, data in enumerate(df['data'].tolist()):
         else:
             lemmatized_data.append(word_lemmatizer.lemmatize(word))
 
-    frequent_words = [val for val, freq in vocab_frequency_tuple][:max_features]
+    filtered_sentences = [w.strip(' ').lower() for w in lemmatized_data if
+                          w.strip(' ').lower() not in stop_words + movie_stop_words]
 
-    truncated_review = []
-    for each_word in lemmatized_data:
-        # Go through each word and discard words which are not present in dictionary
-        each_word = each_word.lower()
-        # Take words which are frequent
-        if each_word in frequent_words:
-            try:
-                truncated_review.append(vocab_to_index[each_word])
-                if len(truncated_review) >= max_word:
-                    break
-            except Exception as exc:
-                print(
-                    '[Exception] if Key word not present in vocab dict but present in frequent words its a bug: {0}'.format(
-                        exc))
+    # Remove all non-english or mis-spelled words
+    # Using Hunspell (install pyhunspell and install required dictionary for hunspell)
+    # fillow this link : https://datascience.blog.wzb.eu/2016/07/13/autocorrecting-misspelled-words-in-python-using-hunspell/
+    ## TODO: 'didnt', 'couldnt' are identified as false by dictionary. create exception for them
+    spellchecker = hunspell.HunSpell('/usr/share/hunspell/en_US.dic', '/usr/share/hunspell/en_US.aff')
+    correct_spell_word = [word for word in filtered_sentences if spellchecker.spell(word)]
 
-    # Pad appropriately if less words are present
-    word_len = len(truncated_review)
-    if word_len:
-        if word_len < max_word:
-            truncated_review += [0] * (max_word - word_len)
-        # input_data[counter] = truncated_review
-        if sentiment_list[idx] == 4:
-            target_data.append(1)
+    # create word to index and index to word dictionary
+    vocab = set(correct_spell_word)
+    for indx, val in enumerate(vocab):
+        # Count frequency of the Word
+        if val in vocab_frequency:
+            vocab_frequency[val] += 1
         else:
-            target_data.append(0)
-        if len(input_data) != 0:
-            input_data = np.vstack((input_data, truncated_review))
-        else:
-            input_data = np.hstack((input_data, truncated_review))
-        counter += 1
+            vocab_frequency[val] = 1
 
+frequent_words_tuple = sorted(vocab_frequency.items(), key=lambda x: x[1], reverse=True)
+frequent_words = [val for val, freq in frequent_words_tuple][:1000]
+print(frequent_words)
+print(frequent_words_tuple[:1000])
+print('Len of vocab ', len(frequent_words_tuple))
+# print(collections.Counter(word_len))
+idx = 1
+vocab_to_idx, idx_to_vocab = {}, {}
+vocab_to_idx['<pad>'] = 0
+idx_to_vocab[0] = '<pad>'
+for val, freq in frequent_words_tuple:
+    vocab_to_idx[val] = idx
+    idx_to_vocab[idx] = val
+    idx += 1
+print('Saving Dictionary')
+print('Index: {0} (conform vocab len)'.format(idx))
+dictionary = {'vocab_to_index': vocab_to_idx, 'index_to_vocab': idx_to_vocab, 'vocab_frequency_tuple': frequent_words_tuple}
+with open('/home/john/sentiment_files/data/twitter_vocab.pkl', 'wb') as f:
+    pickle.dump(dictionary, f)
 
-    if idx % 100000 == 0 and idx != 0:
-        print('Saving data....')
-        target_data = np.array(target_data, int)
-        print(input_data.max(1).max())
-        stri = ''
-        ind = 1000
-        print('Data\n', input_data[ind])
-        for indx in input_data[ind]:
-            stri += ' ' + index_to_vocab[indx]
-        print(stri)
-        print('Traget: ', target_data[ind])
-        print('Input data shape ', input_data.shape)
-        print('Target data shape ', target_data.shape)
-        print('Count ', counter)
-        train_dict = {'input': input_data, 'target': target_data}
-        print('Saving Dictionary')
-        with open('/home/john/sentiment_files/data/complete_data_15_word/complete_train{}.pkl'.format(idx), 'wb') as f:
-            pickle.dump(train_dict, f)
-        target_data = []
-        input_data = np.array([], int)
-        counter = 0
+# # Convert data in to index and store it
+# print('Loading data...')
+# with open('/home/john/sentiment_files/data/complete_vocab_15_word.pkl', 'rb') as f:
+#     data = pickle.load(f)
+# vocab_to_index = data['vocab_to_index']
+# index_to_vocab = data['index_to_vocab']
+# vocab_frequency_tuple = data['vocab_frequency_tuple']
+# vocab_len = len(data['vocab_to_index'])
+# print('Vocab len: ', vocab_len)
+#
+# max_word = 15
+# max_features = 25000
+# count = 0
+# target_data = []
+# input_data = np.array([], int)
+# counter = 0
+# for idx, data in enumerate(df['data'].tolist()):
+#     if sentiment_list[idx] not in [0, 4]:
+#         continue
+#     if idx % 10000 == 0:
+#         print(idx)
+#     # Escape HTML char ir present
+#     html_parser = html.parser.HTMLParser()
+#     html_cleaned_data = html_parser.unescape(data)
+#
+#     # Keep important punctuation
+#     html_cleaned_data = re.sub('[^A-Za-z ]+', '', html_cleaned_data)
+#
+#     # Performing Word Lemmatization on text
+#     lemmatized_data = []
+#     for word, typ in nltk.pos_tag(word_tokenize(html_cleaned_data)):
+#         typ = get_wordnet_pos(typ)
+#         if typ:
+#             lemmatized_data.append(word_lemmatizer.lemmatize(word, typ))
+#         else:
+#             lemmatized_data.append(word_lemmatizer.lemmatize(word))
+#
+#     frequent_words = [val for val, freq in vocab_frequency_tuple][:max_features]
+#
+#     truncated_review = []
+#     for each_word in lemmatized_data:
+#         # Go through each word and discard words which are not present in dictionary
+#         each_word = each_word.lower()
+#         # Take words which are frequent
+#         if each_word in frequent_words:
+#             try:
+#                 truncated_review.append(vocab_to_index[each_word])
+#                 if len(truncated_review) >= max_word:
+#                     break
+#             except Exception as exc:
+#                 print(
+#                     '[Exception] if Key word not present in vocab dict but present in frequent words its a bug: {0}'.format(
+#                         exc))
+#
+#     # Pad appropriately if less words are present
+#     word_len = len(truncated_review)
+#     if word_len:
+#         if word_len < max_word:
+#             truncated_review += [0] * (max_word - word_len)
+#         # input_data[counter] = truncated_review
+#         if sentiment_list[idx] == 4:
+#             target_data.append(1)
+#         else:
+#             target_data.append(0)
+#         if len(input_data) != 0:
+#             input_data = np.vstack((input_data, truncated_review))
+#         else:
+#             input_data = np.hstack((input_data, truncated_review))
+#         counter += 1
+#
+#
+#     if idx % 100000 == 0 and idx != 0:
+#         print('Saving data....')
+#         target_data = np.array(target_data, int)
+#         print(input_data.max(1).max())
+#         stri = ''
+#         ind = 1000
+#         print('Data\n', input_data[ind])
+#         for indx in input_data[ind]:
+#             stri += ' ' + index_to_vocab[indx]
+#         print(stri)
+#         print('Traget: ', target_data[ind])
+#         print('Input data shape ', input_data.shape)
+#         print('Target data shape ', target_data.shape)
+#         print('Count ', counter)
+#         train_dict = {'input': input_data, 'target': target_data}
+#         print('Saving Dictionary')
+#         with open('/home/john/sentiment_files/data/complete_data_15_word/complete_train{}.pkl'.format(idx), 'wb') as f:
+#             pickle.dump(train_dict, f)
+#         target_data = []
+#         input_data = np.array([], int)
+#         counter = 0
 
 # target_data = np.array(target_data, int)
 # print(input_data.max(1).max())
