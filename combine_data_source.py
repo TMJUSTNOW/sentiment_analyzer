@@ -13,14 +13,14 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.corpus import wordnet
 import pandas as pd
 import collections
-import hunspell
+import enchant
 
 
-df = pd.read_csv('/home/john/geek_stuff/Data Set/Twitter_Sentiment_3_class/training.1600000.processed.noemoticon.csv', encoding='latin-1', header=None)
-df.columns = ['target', 'NR1', 'NR2', 'NR3', 'NR4', 'data']
+df = pd.read_csv('/home/janmejaya/sentiment_files/text_data/Twitter_3class/training.1600000.processed.noemoticon.csv', encoding='latin-1', header=None)
+df.columns = ['Sentiment', 'NR1', 'NR2', 'NR3', 'NR4', 'Phrase']
 print(df.columns)
 
-# df = pd.DataFrame.from_csv('/home/john/geek_stuff/Data Set/Rotten_Tomatoes_sentiment_dataset/train.tsv', sep='\t')
+# df = pd.DataFrame.from_csv('/home/janmejaya/sentiment_files/text_data/train.tsv', sep='\t')
 # print(df.columns)
 
 
@@ -31,8 +31,8 @@ stop_words = ['after', 'others', 'clud', 'would', 'id', 'self', 'youll', 'brothe
               'tough', 'island', 'wave', 'official', 'oops', 'setting', 'pls', 'ok', 'thunder', 'oo', 'grandma', 'fave','complete', 'cross', 'eh', 'bug', 'gosh', 'extra', 'practice', 'travel', 'street', 'design', 'watchin',
               'size', 'oooh', 'charge', 'disney', 'guys', 'xbox', 'mind', 'link', 'fall', 'course','hair', 'wife', 'eye', 'thats', 'come', 'plot',
               'english', 'so', 'house', 'year','stick','nap', 'sigh', 'ride', 'dress', 'sing', 'tea', 'fast', 'account', 'realize', 'park', 'decide', 'understand', 'order', 'nd', 'cream', 'less', 'chat','way','thank','spend','fly', 'try', 'baby', 'finish','already', 'call','eat', 'follow', 'play', 'men', 'take', 'cooky', 'gunna', 'wall', 'tree', 'client',
-              'essay', 'sushi', 'germany', 'twice','list', 'be', 'jon', 'go', 'loud', 'fav', 'danny', 'boat', 'style','interesting', 'mention', 'camp', 'except', 'chill', 'block', 'near', 'hospital', 'lets', 'radio', 'fight', 'fact', 'lonely', 'lie', 'gorgeous', 'looks', 'alright', 'taste', 'issue', 'storm', 'scary', 'wine',
-              'girlfriend', 'vid', 'spring', 'jam','hit','reply', 'close', 'remember', 'soup', 'line', 'run', 'put','lines', 'direct', 'three', 'couple', 'next','pray', 'glass', 'waiting', 'count', 'arrive', 'bag', 'behind', 'bar', 'invite', 'mothers', 'pull', 'sounds', 'reading', 'remind', 'along', 'round', 'matter', 'although', 'swim', 'guitar', 'mate', 'joke', 'return', 'low', 'single', 'hangover', 'everybody', 'door', 'hahah', 'bb',
+              'essay', 'sushi', 'germany', 'twice','list', 'be', 'jon', 'loud', 'fav', 'danny', 'boat', 'style','interesting', 'mention', 'camp', 'except', 'chill', 'block', 'near', 'hospital', 'lets', 'radio', 'fight', 'fact', 'lonely', 'lie', 'gorgeous', 'looks', 'alright', 'taste', 'issue', 'storm', 'scary', 'wine',
+              'girlfriend', 'vid', 'spring', 'jam','hit','reply', 'close', 'remember', 'soup', 'line', 'put','lines', 'direct', 'three', 'couple', 'next','pray', 'glass', 'waiting', 'count', 'arrive', 'bag', 'behind', 'bar', 'invite', 'mothers', 'pull', 'sounds', 'reading', 'remind', 'along', 'round', 'matter', 'although', 'swim', 'guitar', 'mate', 'joke', 'return', 'low', 'single', 'hangover', 'everybody', 'door', 'hahah', 'bb',
               'home', 'else', 'saw', 'work','check', 'foot','may', 'birthday','bottle', 'machine', 'sunburn', 'mmm', 'grad', 'mmm', 'available','traffic',
               'followers', 'chris', 'joy','anymore', 'teach','got','catch', 'hang','outside', 'drive', 'real', 'sit', 'feeling', 'every', 'turn', 'follower','going', 'send', 'listen','stay', 'god', 'kitty', 'kate', 'mcfly', 'demi', 'france', 'davidarchie', 'tip',
               'gutted', 'ima', 'present', 'airport','computer','half','hello', 'able','room','chance', 'throat','pool','band','probably', 'bring', 'anyone', 'babe','lunch', 'food','cry','whats', 'seem', 'update', 'meet', 'forget', 'uh', 'attack', 'woohoo', 'mama', 'local', 'jack',
@@ -51,7 +51,7 @@ stop_words = ['after', 'others', 'clud', 'would', 'id', 'self', 'youll', 'brothe
               'jonathanrknight', 'bf', 'mobile', 'tweeps', 'vegas', 'teacher', 'realise', 'kno', 'shopping', 'area','purse', 'victoria', 'alyssamilano',
               'outta', 'bother', 'dentist', 'session', 'pack', 'themselves', 'chicago', 'donniewahlberg', 'while', 'we','africa', 'sm', 'injury', 'necklace', 'remote', 'lens', 'indoors', 'amen', 'sd', 'device', 'bound', 'sofa',
               'against', 'further','sydney','conan','sleeping', 'dave','soul','grab', 'recently', 'tennis', 'software', 'makes', 'wide', 'remove', 'enter', 'replace', 'awe'
-              'these', 'those', 'were', 'be', 'out', 'holy', 'turn', 'leave', 'station', 'midnight', 'him', 'cuz','hardcore', 'sorta', 'extreme', 'arse', 'mario', 'relieve', 'coverage', 'phoenix', 'linux', 'purpose', 'therapy', 'sonic', 'legal', 'safely', 'dizzy', 'simon', 'introduce', 'karma', 'halo', 'rabbit', 'cheesecake', 'buying', 'snl', 'phil', 'distance', 'signing', 'nigga',
+              'these', 'those', 'were', 'be', 'holy', 'turn', 'leave', 'station', 'midnight', 'him', 'cuz','hardcore', 'sorta', 'extreme', 'arse', 'mario', 'relieve', 'coverage', 'phoenix', 'linux', 'purpose', 'therapy', 'sonic', 'legal', 'safely', 'dizzy', 'simon', 'introduce', 'karma', 'halo', 'rabbit', 'cheesecake', 'buying', 'snl', 'phil', 'distance', 'signing', 'nigga',
               'teeth', 'bummer', 'office', 'argh', 'our', 'which', 'yo', 'jus', 'piss', 'daughter', 'cup', 'wit','effin', 'eve', 'yogurt', 'plastic', 'sand', 'needle', 'mariahcarey', 'valley', 'tiger', 'wings', 'clever', 'beg', 'legend', 'united', 'nine', 'edition', 'gt', 'sober', 'rly', 'twitterville', 'workshop', 'usb', 'mirror', 'z', 'tad', 'election', 'aaron', 'bagel', 'proof', 'came', 'met', 'dia', 'ian', 'addictive', 'smooth', 'chain', 'backyard', 'await', 'countdown', 'development', 'sweden', 'cleveland', 'trentreznor', 'inbox', 'chilly', 'reception', 'jessica', 'patrick', 'overnight', 'engine', 'tournament', 'beef', 'tat', 'tweetup', 'federer', 'hahaa', 'doh', 'thread', 'thou',
               'just', 'box', 'note', 'tom', 'myspace', 'service', 'cheer', 'raining', 'road', 'rainy', 'window','menu', 'butterfly', 'sickness', 'dvr', 'fantasy', 'started', 'chop', 'besties', 'alice', 'management', 'berry', 'mega', 'srsly', 'skirt', 'yelyahwilliams', 'oooo', 'vanilla', 'potential', 'xxxxx', 'factory', 'korean', 'memorial', 'sara', 'kat', 'neglect', 'whale', 'meeee', 'ikea', 'passion', 'don', 'trap', 'iz', 'polish', 'active', 'leavin', 'reckon', 'pat', 'videos', 'pr', 'gum', 'knw', 'ubuntu', 'blogger', 'shaun', 'girly', 'strip', 'diff', 'twist', 'collect', 'convo', 'detroit', 'campus', 'laker', 'benefit', 'hype', 'iced', 'nokia', 'furniture', 'uber', 'humid', 'exit', 'opposite', 'solid', 'chilling', 'yucky', 'childhood',
               'tummy', 'doing', 'this', 'had','mike', 'shoulder', 'salad', 'asap', 'dirty', 'performance', 'comp', 'shell', 'driver', 'grand', 'error', 'member', 'freeze', 'spending', 'obviously', 'goodmorning', 'hook', 'survive', 'user', 'literally', 'twitpic', 'scratch', 'chick', 'crush', 'knock', 'diversity', 'toy', 'massive', 'everytime', 'mmmm', 'wee', 'letter', 'driving', 'apps', 'bake', 'boot', 'plant', 'pa', 'writing', 'stream', 'trend', 'uncle', 'presentation', 'conversation', 'susan', 'wwwtweeteraddercom', 'sugar', 'hella', 'brand', 'baseball', 'crave', 'tweeter', 'montana', 'horse', 'third', 'vet', 'yard', 'ankle', 'tht', 'truck', 'accept', 'theyll', 'aim', 'original', 'quality', 'fellow', 'andy',
@@ -59,7 +59,7 @@ stop_words = ['after', 'others', 'clud', 'would', 'id', 'self', 'youll', 'brothe
               'type', 'bbq', 'apple', 'graduation', 'by', 'at', 'until', 'here', 'officially', 'case', 'idk', 'bike','atlanta', 'ang', 'bone', 'mon', 'ng', 'careful', 'vs', 'bbc', 'surf', 'jacket', 'compliment', 'yeahh', 'glorious', 'iv', 'brownie', 'speech', 'allergic', 'twitterverse', 'bedroom', 'lightning', 'bruise', 'bob', 'similar', 'nooooo', 'normally', 'marketing', 'sunburnt', 'needs', 'pretend', 'trade', 'roast', 'offline', 'emily', 'en', 'talented', 'bull', 'playin', 'highly','hack', 'package', 'basketball', 'competition', 'bt', 'simply', 'hay', 'rich', 'mexico', 'bubble', 'gd', 'singer', 'punch', 'rofl', 'cereal', 'att', 'yey', 'battle', 'gaga', 'awh', 'virus', 'pump', 'grill', 'ireland', 'pure', 'soak', 'gf', 'que', 'prolly',
               'itll', 'garden', 'sims', 'leg', 'boyfriend', 'camera', 'jonasbrothers', 'son', 'were', 'if', 'myself','closer', 'hawaii', 'pee', 'itd', 'poker', 'court', 'sauce', 'icecream', 'ace', 'surely', 'perezhilton', 'apt', 'lolz', 'china', 'easily', 'bought', 'bugger', 'distract', 'boooo', 'ure', 'pride', 'desperate', 'mexican', 'assume', 'fridge', 'seeing', 'stalk', 'cherry', 'wondering', 'awwwww', 'preview', 'common', 'mass', 'oil', 'ti', 'feedback', 'effort', 'india', 'female','skill', 'september', 'babysitting','outfit', 'trick', 'hd', 'wolverine', 'fox', 'gain', 'eu', 'piano', 'convince', 'frm', 'urgh', 'pity', 'bestie', 'swimming', 'funeral', 'rate', 'jordan', 'stone', 'fully', 'studying', 'spoil', 'monster', 'chest', 'tony', 'yoga', 'youngq', 'con', 'thnx', 'faster', 'confused', 'deck', 'momma', 'cap', 'creepy', 'opinion', 'stoke', 'garage',
               'ma', 'delivery','password', 'swell', 'pressure', 'il', 'progress', 'mp', 'earn', 'pill', 'spin', 'bud', 'hrs', 'pasta', 'entry', 'steak', 'comfy', 'technology', 'pillow', 'hockey', 'di', 'escape', 'wheel', 'donut', 'damnit', 'dare', 'philippines', 'repair', 'softball', 'ch', 'accidentally', 'tasty', 'scotland', 'audition', 'register','melbourne', 'wana', 'recipe', 'freedom', 'dis', 'skool','marathon', 'productive','dear','join','together','figure','sunny', 'learn','test','watching','tell',
-              'ours', 'as', 'all', 'each', 'how', 'when', 'adult', 'thanks', 'whose', 'other', 'itself', 'an','beginning', 'cramp', 'plug', 'sittin', 'angels', 'mary', 'sneak', 'faith', 'houston', 'pig', 'yu', 'jimmy', 'friendly', 'tomorow', 'farrah', 'compare', 'iranelection', 'doll', 'november', 'moms', 'tweets', 'sweat', 'austin', 'icon', 'maths', 'yikes', 'metro', 'ghost', 'bk', 'manchester', 'announce', 'april', 'makin', 'square', 'walking', 'tt','access', 'coast','advice', 'lock','bore','happen',
+              'ours', 'as', 'all', 'each', 'how', 'when', 'adult', 'thanks', 'whose', 'other', 'itself', 'an','beginning', 'cramp', 'plug', 'sittin', 'angels', 'mary', 'sneak', 'faith', 'houston', 'pig', 'yu', 'jimmy', 'friendly', 'tomorow', 'farrah', 'compare', 'iranelection', 'doll', 'november', 'moms', 'tweets', 'sweat', 'austin', 'icon', 'maths', 'yikes', 'metro', 'ghost', 'bk', 'manchester', 'announce', 'april', 'makin', 'square', 'walking', 'tt','access', 'coast','advice', 'lock','happen',
               'thursday', 'ahhh', 'miley', 'my', 'did', 'them', 'ourselves','va', 'melt', 'dawn', 'tomfelton', 'cooking', 'gloomy', 'eric', 'fest', 'apprentice', 'refresh', 'manager', 'kim', 'philly', 'opportunity', 'struggle', 'cam', 'starve', 'yawn', 'tax', 'tongue', 'bump', 'meat', 'contract','cop', 'shaundiviney', 'gfalcone', 'item', 'sadness', 'yuck', 'poster', 'chelsea', 'noon', 'heel', 'pot', 'moro', 'desktop', 'depend', 'confirm', 'lawn', 'omfg', 'q', 'kris', 'sock', 'ray', 'serve', 'peanut', 'hungover', 'aswell', 'japan', 'singing', 'ass', 'walmart', 'noodle', 'naked', 'cnt', 'lover', 'brunch', 'italian', 'potato', 'couldve', 'community', 'honor', 'pen', 'hip', 'mia', 'ho', 'gs',
               'during', 'whom', 'am', 'o', 'same', 'are', 'visual', 'maintain', 'number', 'wannabe', 'jonas', 'bc','lab', 'whilst', 'nkotb', 'mondays', 'noo', 'theyve', 'thinkin', 'hills', 'scared', 'muscle', 'snack', 'dan', 'poo', 'lyric', 'impossible', 'purchase', 'relate', 'application', 'shape', 'monkey', 'rehearsal', 'van', 'clip', 'vids', 'katie', 'mee', 'charger', 'section', 'celebrity', 'ol', 'yellow', 'justin', 'giant', 'insomnia', 'tim', 'general', 'mission', 'kelly', 'jess', 'yell', 'bio', 'comic', 'breath', 'laying', 'planning', 'mcdonalds', 'grass', 'comin', 'coming',
               'french', 'business', 'yup', 'tuesday', 'have', 'ipod', 'above', 'what', 'both', 'do', 'off', 'before','spirit', 'noone', 'blink', 'tool', 'spider', 'someday', 'ocean', 'darling', 'actual','ow', 'duty','picnic','apply', 'loose', 'candy', 'er', 'proper', 'idiot', 'migraine', 'situation', 'shock', 'cancer', 'breathe', 'meh', 'certainly', 'ashley', 'mm', 'tooth', 'med', 'texting', 'rite', 'cash', 'burger', 'challenge', 'cavs', 'whenever', 'flash', 'heaven', 'bacon', 'killer', 'worried', 'xxxx', 'chuck', 'todays', 'packing', 'large', 'kitten',
@@ -123,7 +123,7 @@ movie_stop_words = ['actors', 'actor', 'idea', 'ca', 'provide', 'old', 'timeless
                     'edge', 'question', 'director', 'ive', 'back', 'th', 'chemistry', 'bill', 'lee',
                     'audiences', 'producers', 'spielberg', 'mindnumbingly', 'bond', 'document', 'strike', 'ii',
                     'washington', 'poetry', 'soar', 'vital', 'frame', 'remake', 'filmed', 'ensemble', 'watchable',
-                    'wellmade', 'sign', 'wo', 'sound', 'walk', 'form', 'shoot', 'inept', 'melodrama', 'view',
+                    'wellmade', 'sign', 'wo', 'sound', 'form', 'shoot', 'inept', 'melodrama', 'view',
                     'animation', 'review', 'song', 'musical', 'songs', 'black', 'though', 'thriller', 'theater',
                     'br', 'dialog', 'james', 'one', 'clarity', 'whimsical', 'odd', 'tear', 'expect', 'guarantee',
                     'journey', 'dead', 'stunt', 'maker', 'novel', 'choose', 'lift', 'period', 'sensual', 'portrayal',
@@ -157,87 +157,12 @@ def get_wordnet_pos(treebank_tag):
 word_lemmatizer = WordNetLemmatizer()
 
 vocab_frequency = {}
-sentiment_list = df['target'].tolist()
+sentiment_list = df['Sentiment'].tolist()
 print(len(sentiment_list))
 sentence_id = []
-for idx, data in enumerate(df['data'].tolist()):
-
-    # Escape HTML char ir present
-    html_parser = html.parser.HTMLParser()
-    html_cleaned_data = html_parser.unescape(data)
-
-    # Keep important punctuation
-    html_cleaned_data = re.sub('[^A-Za-z ]+', '', html_cleaned_data)
-
-    # Performing Word Lemmatization on text
-    lemmatized_data = []
-    for word, typ in nltk.pos_tag(word_tokenize(html_cleaned_data)):
-        typ = get_wordnet_pos(typ)
-        if typ:
-            lemmatized_data.append(word_lemmatizer.lemmatize(word, typ))
-        else:
-            lemmatized_data.append(word_lemmatizer.lemmatize(word))
-
-    filtered_sentences = [w.strip(' ').lower() for w in lemmatized_data if
-                          w.strip(' ').lower() not in stop_words + movie_stop_words]
-
-    # Remove all non-english or mis-spelled words
-    # Using Hunspell (install pyhunspell and install required dictionary for hunspell)
-    # fillow this link : https://datascience.blog.wzb.eu/2016/07/13/autocorrecting-misspelled-words-in-python-using-hunspell/
-    ## TODO: 'didnt', 'couldnt' are identified as false by dictionary. create exception for them
-    spellchecker = hunspell.HunSpell('/usr/share/hunspell/en_US.dic', '/usr/share/hunspell/en_US.aff')
-    correct_spell_word = [word for word in filtered_sentences if spellchecker.spell(word)]
-
-    # create word to index and index to word dictionary
-    vocab = set(correct_spell_word)
-    for indx, val in enumerate(vocab):
-        # Count frequency of the Word
-        if val in vocab_frequency:
-            vocab_frequency[val] += 1
-        else:
-            vocab_frequency[val] = 1
-
-frequent_words_tuple = sorted(vocab_frequency.items(), key=lambda x: x[1], reverse=True)
-frequent_words = [val for val, freq in frequent_words_tuple][:1000]
-print(frequent_words)
-print(frequent_words_tuple[:1000])
-print('Len of vocab ', len(frequent_words_tuple))
-# print(collections.Counter(word_len))
-idx = 1
-vocab_to_idx, idx_to_vocab = {}, {}
-vocab_to_idx['<pad>'] = 0
-idx_to_vocab[0] = '<pad>'
-for val, freq in frequent_words_tuple:
-    vocab_to_idx[val] = idx
-    idx_to_vocab[idx] = val
-    idx += 1
-print('Saving Dictionary')
-print('Index: {0} (conform vocab len)'.format(idx))
-dictionary = {'vocab_to_index': vocab_to_idx, 'index_to_vocab': idx_to_vocab, 'vocab_frequency_tuple': frequent_words_tuple}
-with open('/home/john/sentiment_files/data/twitter_vocab.pkl', 'wb') as f:
-    pickle.dump(dictionary, f)
-
-# # Convert data in to index and store it
-# print('Loading data...')
-# with open('/home/john/sentiment_files/data/complete_vocab_15_word.pkl', 'rb') as f:
-#     data = pickle.load(f)
-# vocab_to_index = data['vocab_to_index']
-# index_to_vocab = data['index_to_vocab']
-# vocab_frequency_tuple = data['vocab_frequency_tuple']
-# vocab_len = len(data['vocab_to_index'])
-# print('Vocab len: ', vocab_len)
-#
-# max_word = 15
-# max_features = 25000
-# count = 0
-# target_data = []
-# input_data = np.array([], int)
-# counter = 0
-# for idx, data in enumerate(df['data'].tolist()):
+# for idx, data in enumerate(df['Phrase'].tolist()):
 #     if sentiment_list[idx] not in [0, 4]:
 #         continue
-#     if idx % 10000 == 0:
-#         print(idx)
 #     # Escape HTML char ir present
 #     html_parser = html.parser.HTMLParser()
 #     html_cleaned_data = html_parser.unescape(data)
@@ -254,75 +179,153 @@ with open('/home/john/sentiment_files/data/twitter_vocab.pkl', 'wb') as f:
 #         else:
 #             lemmatized_data.append(word_lemmatizer.lemmatize(word))
 #
-#     frequent_words = [val for val, freq in vocab_frequency_tuple][:max_features]
+#     filtered_sentences = [w.strip(' ').lower() for w in lemmatized_data if
+#                           w.strip(' ').lower() not in stop_words + movie_stop_words]
 #
-#     truncated_review = []
-#     for each_word in lemmatized_data:
-#         # Go through each word and discard words which are not present in dictionary
-#         each_word = each_word.lower()
-#         # Take words which are frequent
-#         if each_word in frequent_words:
-#             try:
-#                 truncated_review.append(vocab_to_index[each_word])
-#                 if len(truncated_review) >= max_word:
-#                     break
-#             except Exception as exc:
-#                 print(
-#                     '[Exception] if Key word not present in vocab dict but present in frequent words its a bug: {0}'.format(
-#                         exc))
+#     # Remove all non-english or mis-spelled words
+#     enchant_dict = enchant.Dict("en_US")
+#     correct_spell_word = [word for word in filtered_sentences if enchant_dict.check(word)]
 #
-#     # Pad appropriately if less words are present
-#     word_len = len(truncated_review)
-#     if word_len:
-#         if word_len < max_word:
-#             truncated_review += [0] * (max_word - word_len)
-#         # input_data[counter] = truncated_review
-#         if sentiment_list[idx] == 4:
-#             target_data.append(1)
+#     if idx % 100000 == 0:
+#         print('For idx {0} data {1}'.format(idx, data))
+#         print('Correct words:  {0}'.format(correct_spell_word))
+#         print('Target: {0}'.format(sentiment_list[idx]))
+#
+#     # create word to index and index to word dictionary
+#     vocab = set(correct_spell_word)
+#     for indx, val in enumerate(vocab):
+#         # Count frequency of the Word
+#         if val in vocab_frequency:
+#             vocab_frequency[val] += 1
 #         else:
-#             target_data.append(0)
-#         if len(input_data) != 0:
-#             input_data = np.vstack((input_data, truncated_review))
-#         else:
-#             input_data = np.hstack((input_data, truncated_review))
-#         counter += 1
+#             vocab_frequency[val] = 1
 #
-#
-#     if idx % 100000 == 0 and idx != 0:
-#         print('Saving data....')
-#         target_data = np.array(target_data, int)
-#         print(input_data.max(1).max())
-#         stri = ''
-#         ind = 1000
-#         print('Data\n', input_data[ind])
-#         for indx in input_data[ind]:
-#             stri += ' ' + index_to_vocab[indx]
-#         print(stri)
-#         print('Traget: ', target_data[ind])
-#         print('Input data shape ', input_data.shape)
-#         print('Target data shape ', target_data.shape)
-#         print('Count ', counter)
-#         train_dict = {'input': input_data, 'target': target_data}
-#         print('Saving Dictionary')
-#         with open('/home/john/sentiment_files/data/complete_data_15_word/complete_train{}.pkl'.format(idx), 'wb') as f:
-#             pickle.dump(train_dict, f)
-#         target_data = []
-#         input_data = np.array([], int)
-#         counter = 0
+# frequent_words_tuple = sorted(vocab_frequency.items(), key=lambda x: x[1], reverse=True)
+# frequent_words = [val for val, freq in frequent_words_tuple][:1000]
+# print(frequent_words)
+# print(frequent_words_tuple[:1000])
+# print('Len of vocab ', len(frequent_words_tuple))
+# # print(collections.Counter(word_len))
+# idx = 1
+# vocab_to_idx, idx_to_vocab = {}, {}
+# vocab_to_idx['<pad>'] = 0
+# idx_to_vocab[0] = '<pad>'
+# for val, freq in frequent_words_tuple:
+#     vocab_to_idx[val] = idx
+#     idx_to_vocab[idx] = val
+#     idx += 1
+# print('Saving Dictionary')
+# print('Index: {0} (conform vocab len)'.format(idx))
+# dictionary = {'vocab_to_index': vocab_to_idx, 'index_to_vocab': idx_to_vocab, 'vocab_frequency_tuple': frequent_words_tuple}
+# with open('/home/janmejaya/sentiment_files/data/rotten_movie_vocab.pkl', 'wb') as f:
+#     pickle.dump(dictionary, f)
 
-# target_data = np.array(target_data, int)
-# print(input_data.max(1).max())
-# stri = ''
-# ind = 1000
-# print('Data\n', input_data[ind])
-# for indx in input_data[ind]:
-#     stri += ' ' + index_to_vocab[indx]
-# print(stri)
-# print('Traget: ', target_data[ind])
-# print('Input data shape ', input_data.shape)
-# print('Target data shape ', target_data.shape)
-#
-# train_dict = {'input': input_data, 'target': target_data}
-#
-# with open('/home/john/sentiment_files/data/complete_data_15_word/complete_train1.pkl', 'wb') as f:
-#     pickle.dump(train_dict, f)
+# Convert data in to index and store it
+print('Loading data...')
+with open('/home/janmejaya/sentiment_files/data/complete_vocab_15_word.pkl', 'rb') as f:
+    data = pickle.load(f)
+vocab_to_index = data['vocab_to_index']
+index_to_vocab = data['index_to_vocab']
+vocab_frequency_tuple = data['vocab_frequency_tuple']
+vocab_len = len(vocab_frequency_tuple)
+print('Vocab len: ', vocab_len)
+
+max_word = 15
+max_features = vocab_len
+count = 0
+target_data = []
+input_data = np.array([], np.float64)
+counter = 0
+for idx, data in enumerate(df['Phrase'].tolist()):
+    if sentiment_list[idx] not in [0, 4]:
+        continue
+    if idx % 10000 == 0:
+        print(idx)
+    # Escape HTML char ir present
+    html_parser = html.parser.HTMLParser()
+    html_cleaned_data = html_parser.unescape(data)
+
+    # Keep important punctuation
+    html_cleaned_data = re.sub('[^A-Za-z ]+', '', html_cleaned_data)
+
+    # Performing Word Lemmatization on text
+    lemmatized_data = []
+    for word, typ in nltk.pos_tag(word_tokenize(html_cleaned_data)):
+        typ = get_wordnet_pos(typ)
+        if typ:
+            lemmatized_data.append(word_lemmatizer.lemmatize(word, typ))
+        else:
+            lemmatized_data.append(word_lemmatizer.lemmatize(word))
+
+    frequent_words = [val for val, freq in vocab_frequency_tuple][:max_features]
+
+    truncated_review = []
+    for each_word in lemmatized_data:
+        # Go through each word and discard words which are not present in dictionary
+        each_word = each_word.lower()
+        # Take words which are frequent
+        if each_word in frequent_words:
+            try:
+                truncated_review.append(vocab_to_index[each_word])
+                if len(truncated_review) >= max_word:
+                    break
+            except Exception as exc:
+                print(
+                    '[Exception] if Key word not present in vocab dict but present in frequent words its a bug: {0}'.format(
+                        exc))
+
+    # Pad appropriately if less words are present
+    word_len = len(truncated_review)
+    if word_len:
+        if word_len < max_word:
+            truncated_review += [0] * (max_word - word_len)
+        # input_data[counter] = truncated_review
+        if sentiment_list[idx] == 4:
+            target_data.append(1)
+        else:
+            target_data.append(0)
+        if len(input_data) != 0:
+            input_data = np.vstack((input_data, truncated_review))
+        else:
+            input_data = np.hstack((input_data, truncated_review))
+        counter += 1
+
+
+    if idx % 100000 == 0 and idx != 0:
+        print('Saving data....')
+        target_data = np.array(target_data, np.float64)
+        print(input_data.max(1).max())
+        stri = ''
+        ind = 1000
+        print('Data\n', input_data[ind])
+        for indx in input_data[ind]:
+            stri += ' ' + index_to_vocab[indx]
+        print(stri)
+        print('Traget: ', target_data[ind])
+        print('Input data shape ', input_data.shape)
+        print('Target data shape ', target_data.shape)
+        print('Count ', counter)
+        train_dict = {'input': input_data, 'target': target_data}
+        print('Saving Dictionary')
+        with open('/home/janmejaya/sentiment_files/data/complete_data/twitter_train{}.pkl'.format(idx), 'wb') as f:
+            pickle.dump(train_dict, f)
+        target_data = []
+        input_data = np.array([], np.float64)
+        counter = 0
+
+target_data = np.array(target_data, np.float64)
+print(input_data.max(1).max())
+stri = ''
+ind = 1000
+print('Data\n', input_data[ind])
+for indx in input_data[ind]:
+    stri += ' ' + index_to_vocab[indx]
+print(stri)
+print('Traget: ', target_data[ind])
+print('Input data shape ', input_data.shape)
+print('Target data shape ', target_data.shape)
+
+train_dict = {'input': input_data, 'target': target_data}
+
+with open('/home/janmejaya/sentiment_files/data/complete_data/train2.pkl', 'wb') as f:
+    pickle.dump(train_dict, f)

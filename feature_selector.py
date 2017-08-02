@@ -1,5 +1,6 @@
 import pickle
 import time
+import json
 
 import tensorflow as tf
 from keras.preprocessing import sequence
@@ -10,7 +11,6 @@ import numpy as np
 
 
 max_word = 15
-max_features = 25000
 batch_size = 100
 state_size = 25
 n_classes = 2
@@ -18,12 +18,12 @@ learning_rate = 0.1
 hidden_layer1 = 500
 hidden_layer2 = 300
 
-with open('/home/john/sentiment_files/data/movie_vocab.pkl', 'rb') as f:
+with open('/home/janmejaya/sentiment_files/data/movie_vocab.pkl', 'rb') as f:
     data = pickle.load(f)
 
 vocab_len = len(data['vocab_frequency_tuple'])
 print('Vocab len: ', vocab_len)
-
+vocab_len = 10000
 # Weights
 w_nn1 = tf.Variable(tf.random_normal([vocab_len, hidden_layer1]), name='w_nn1')
 b_nn1 = tf.Variable(tf.random_normal([hidden_layer1]), name='b_nn1')
@@ -53,7 +53,7 @@ regularized_loss = losses + regularization_penalty
 
 optimizer = tf.train.AdagradOptimizer(learning_rate).minimize(regularized_loss)
 
-with open('/home/john/sentiment_files/data/train.pkl', 'rb') as f:
+with open('/home/janmejaya/sentiment_files/data/train.pkl', 'rb') as f:
     data = pickle.load(f)
 
 perm = np.arange(len(data['input']))
@@ -65,6 +65,9 @@ with tf.Session() as sess:
         np.random.shuffle(perm)
         input_data = data['input'][perm]
         target_data = data['target'][perm]
+        print(input_data.max(1).max())
+        print(input_data.shape)
+
         for idx, data in enumerate(input_data):
             if target_data[idx] == 1:
                 target = np.ones([max_word, 1])
@@ -73,3 +76,8 @@ with tf.Session() as sess:
             feed_dict = {x: sess.run(tf.one_hot(data, vocab_len)), y: target}
             _, reg_loss, loss = sess.run([optimizer, regularized_loss, losses], feed_dict=feed_dict)
             print('Reg los ', reg_loss)
+            if idx % 10000 == 0:
+                print('Saving Weightss')
+                w_val = sess.run(w_nn1)
+                print('Shape ', w_val.shape)
+                np.savetxt('w.txt', np.sum(w_val, axis=1))
