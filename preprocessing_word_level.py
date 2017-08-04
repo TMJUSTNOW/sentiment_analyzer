@@ -19,12 +19,13 @@ train_neg_sample_dir = '/home/john/geek_stuff/Data_Set/IMDB_sentiment_analysis_d
 test_neg_sample_dir = '/home/john/geek_stuff/Data_Set/IMDB_sentiment_analysis_data/aclImdb/test/neg'
 test_pos_sample_dir = '/home/john/geek_stuff/Data_Set/IMDB_sentiment_analysis_data/aclImdb/test/pos'
 
+
 train_pos = [each_file for each_file in os.listdir(train_pos_sample_dir) if os.path.isfile(os.path.join(train_pos_sample_dir, each_file))]
 train_neg = [each_file for each_file in os.listdir(train_neg_sample_dir) if os.path.isfile(os.path.join(train_neg_sample_dir, each_file))]
 test_pos = [each_file for each_file in os.listdir(test_pos_sample_dir) if os.path.isfile(os.path.join(test_pos_sample_dir, each_file))]
 test_neg = [each_file for each_file in os.listdir(test_neg_sample_dir) if os.path.isfile(os.path.join(test_neg_sample_dir, each_file))]
 
-file_list = test_pos[6250:] + test_neg[6250:]
+file_list = train_pos + train_neg + test_pos[:6250] + test_neg[:6250]
 print(len(file_list))
 print(len(test_neg))
 idx_to_vocab = {}
@@ -91,7 +92,6 @@ word_lemmatizer = WordNetLemmatizer()
 #     filtered_sentences = [w.strip(' ').lower() for w in lemmatized_data if w.strip(' ').lower() not in stop_words+movie_stop_words]
 #
 #     # Remove all non-english or mis-spelled words
-#     # Using Hunspell (install pyhunspell and install required dictionary for hunspell)
 #     enchant_dict = enchant.Dict("en_US")
 #     correct_spell_word = [word for word in filtered_sentences if enchant_dict.check(word)]
 #
@@ -149,7 +149,7 @@ print('Vocab len: ', vocab_len)
 print("Len of vocab freq tuple ", len(vocab_frequency_tuple))
 
 max_word = 15
-max_features = len(data['vocab_frequency_tuple']) + 1
+max_features = vocab_len
 file_pointer = 0
 def next_batch(batch_size, test=False):
     # This function reads equal amount of positive and negative review depending on batch size.
@@ -191,6 +191,9 @@ def next_batch(batch_size, test=False):
     for index, each_file in enumerate(file_list):
         if index % 5000 == 0:
             print(index)
+
+        if index >= 25000:
+            test = True
 
         if test:
             pos_dir = test_pos_sample_dir
@@ -257,17 +260,18 @@ def next_batch(batch_size, test=False):
     target_data = np.array(target_data)
     return (input_data, target_data)
 
-# data_x, data_y = next_batch(len(file_list))
-# train_dict = {'input': data_x, 'target': data_y}
-# print('Input shape ', data_x.shape)
-# print('Target shape ', data_y.shape)
-# with open('/home/john/sentiment_files/data/train.pkl', 'wb') as f:
-#     pickle.dump(train_dict, f)
-
-data_x, data_y = next_batch(len(file_list), test=True)
-test_dict = {'input': data_x, 'target': data_y}
-print('Max value in test: ', test_dict['input'].max(1).max())
+data_x, data_y = next_batch(len(file_list))
+train_dict = {'input': data_x, 'target': data_y}
 print('Input shape ', data_x.shape)
 print('Target shape ', data_y.shape)
+
 with open('/home/john/sentiment_files/data/complete_data_15_word/test/test.pkl', 'wb') as f:
     pickle.dump(test_dict, f)
+
+# data_x, data_y = next_batch(len(file_list), test=True)
+# test_dict = {'input': data_x, 'target': data_y}
+# print('Max value in test: ', test_dict['input'].max(1).max())
+# print('Input shape ', data_x.shape)
+# print('Target shape ', data_y.shape)
+# with open('/home/john/sentiment_files/data/test.pkl', 'wb') as f:
+#     pickle.dump(test_dict, f)
