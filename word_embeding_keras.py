@@ -6,7 +6,7 @@
 
 from keras.preprocessing import sequence
 from keras.models import Sequential
-from keras.layers import Dense, Embedding, Masking, LSTM
+from keras.layers import Dense, Embedding, Masking, LSTM, Conv1D, MaxPooling1D, Flatten, Dropout
 from keras.datasets import imdb
 import numpy as np
 from nltk.tokenize import word_tokenize
@@ -19,7 +19,7 @@ import time
 
 print('Loading data...')
 # (x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=max_features)
-with open('/home/john/sentiment_files/data/complete_vocab_15_word.pkl', 'rb') as f:
+with open('/home/john/sentiment_files/data/movie_vocab.pkl', 'rb') as f:
     data = pickle.load(f)
 print(len(data['vocab_to_index']))
 vocab_to_index = data['vocab_to_index']
@@ -136,11 +136,12 @@ model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accur
 # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 print('Train...')
-with open('/home/john/sentiment_files/data/complete_data_15_word/complete_train4.pkl', 'rb') as f:
+with open('/home/john/sentiment_files/data/train.pkl', 'rb') as f:
     data = pickle.load(f)
 perm = np.arange(len(data['input']))
 np.random.shuffle(perm)
 print(data['input'].max(1).max())
+print(len(data['input']))
 # stri = ''
 # ind = 160000
 # print('Data\n', data['input'][ind])
@@ -156,7 +157,7 @@ target = sess.run(tf.one_hot(data['target'][perm], n_classes))
 model.fit(data['input'][perm], target, batch_size=batch_size, epochs=5, validation_split=0.3)
 
 print('Test...')
-with open('/home/john/sentiment_files/data/complete_data_15_word/complete_test.pkl', 'rb') as f:
+with open('/home/john/sentiment_files/data/test.pkl', 'rb') as f:
     data = pickle.load(f)
 perm = np.arange(len(data['input']))
 np.random.shuffle(perm)

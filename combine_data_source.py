@@ -13,15 +13,15 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.corpus import wordnet
 import pandas as pd
 import collections
-import hunspell
+import enchant
 
 
-df = pd.read_csv('/home/john/geek_stuff/Data Set/Twitter_Sentiment_3_class/training.1600000.processed.noemoticon.csv', encoding='latin-1', header=None)
-df.columns = ['target', 'NR1', 'NR2', 'NR3', 'NR4', 'data']
-print(df.columns)
-
-# df = pd.DataFrame.from_csv('/home/john/geek_stuff/Data Set/Rotten_Tomatoes_sentiment_dataset/train.tsv', sep='\t')
+# df = pd.read_csv('/home/john/geek_stuff/Data Set/Twitter_Sentiment_3_class/training.1600000.processed.noemoticon.csv', encoding='latin-1', header=None)
+# df.columns = ['target', 'NR1', 'NR2', 'NR3', 'NR4', 'data']
 # print(df.columns)
+
+df = pd.DataFrame.from_csv('/home/john/geek_stuff/Data Set/Rotten_Tomatoes_sentiment_dataset/train.tsv', sep='\t')
+print(df.columns)
 
 
 # Break data into words and remove stop Words(or unnecessary words which doesn't have much influence on meaning)
@@ -157,11 +157,12 @@ def get_wordnet_pos(treebank_tag):
 word_lemmatizer = WordNetLemmatizer()
 
 vocab_frequency = {}
-sentiment_list = df['target'].tolist()
+sentiment_list = df['Sentiment'].tolist()
 print(len(sentiment_list))
 sentence_id = []
-for idx, data in enumerate(df['data'].tolist()):
-
+for idx, data in enumerate(df['Phrase'].tolist()):
+    if sentiment_list[idx] not in [0, 4]:
+        continue
     # Escape HTML char ir present
     html_parser = html.parser.HTMLParser()
     html_cleaned_data = html_parser.unescape(data)
@@ -185,8 +186,8 @@ for idx, data in enumerate(df['data'].tolist()):
     # Using Hunspell (install pyhunspell and install required dictionary for hunspell)
     # fillow this link : https://datascience.blog.wzb.eu/2016/07/13/autocorrecting-misspelled-words-in-python-using-hunspell/
     ## TODO: 'didnt', 'couldnt' are identified as false by dictionary. create exception for them
-    spellchecker = hunspell.HunSpell('/usr/share/hunspell/en_US.dic', '/usr/share/hunspell/en_US.aff')
-    correct_spell_word = [word for word in filtered_sentences if spellchecker.spell(word)]
+    enchant_dict = enchant.Dict("en_US")
+    correct_spell_word = [word for word in filtered_sentences if enchant_dict.check(word)]
 
     # create word to index and index to word dictionary
     vocab = set(correct_spell_word)
@@ -214,7 +215,7 @@ for val, freq in frequent_words_tuple:
 print('Saving Dictionary')
 print('Index: {0} (conform vocab len)'.format(idx))
 dictionary = {'vocab_to_index': vocab_to_idx, 'index_to_vocab': idx_to_vocab, 'vocab_frequency_tuple': frequent_words_tuple}
-with open('/home/john/sentiment_files/data/twitter_vocab.pkl', 'wb') as f:
+with open('/home/john/sentiment_files/data/rotten_movie_vocab.pkl', 'wb') as f:
     pickle.dump(dictionary, f)
 
 # # Convert data in to index and store it

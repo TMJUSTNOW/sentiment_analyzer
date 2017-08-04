@@ -14,10 +14,10 @@ from nltk.corpus import wordnet
 import enchant
 
 # Read data set(IMDB Review data)
-train_pos_sample_dir = '/home/john/geek_stuff/Data Set/IMDB_sentiment_analysis_data/aclImdb/train/pos'
-train_neg_sample_dir = '/home/john/geek_stuff/Data Set/IMDB_sentiment_analysis_data/aclImdb/train/neg'
-test_neg_sample_dir = '/home/john/geek_stuff/Data Set/IMDB_sentiment_analysis_data/aclImdb/test/neg'
-test_pos_sample_dir = '/home/john/geek_stuff/Data Set/IMDB_sentiment_analysis_data/aclImdb/test/pos'
+train_pos_sample_dir = '/home/john/geek_stuff/Data_Set/IMDB_sentiment_analysis_data/aclImdb/train/pos'
+train_neg_sample_dir = '/home/john/geek_stuff/Data_Set/IMDB_sentiment_analysis_data/aclImdb/train/neg'
+test_neg_sample_dir = '/home/john/geek_stuff/Data_Set/IMDB_sentiment_analysis_data/aclImdb/test/neg'
+test_pos_sample_dir = '/home/john/geek_stuff/Data_Set/IMDB_sentiment_analysis_data/aclImdb/test/pos'
 
 train_pos = [each_file for each_file in os.listdir(train_pos_sample_dir) if os.path.isfile(os.path.join(train_pos_sample_dir, each_file))]
 train_neg = [each_file for each_file in os.listdir(train_neg_sample_dir) if os.path.isfile(os.path.join(train_neg_sample_dir, each_file))]
@@ -34,10 +34,10 @@ len_vocab = 0
 index_to_start = 1      # 0th index is used for padding
 
 def get_wordnet_pos(treebank_tag):
-
-    if treebank_tag.startswith('J'):
-        return wordnet.ADJ
-    elif treebank_tag.startswith('V'):
+    ## Removed Adjective from pos tagging as word_lemmatizer convert superlative degree to original form
+    # if treebank_tag.startswith('J'):
+    #     return wordnet.ADJ
+    if treebank_tag.startswith('V'):
         return wordnet.VERB
     elif treebank_tag.startswith('N'):
         return wordnet.NOUN
@@ -139,7 +139,7 @@ word_lemmatizer = WordNetLemmatizer()
 # Convert data in to index and store it
 print('Loading data...')
 # (x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=max_features)
-with open('/home/john/sentiment_files/data/movie_vocab.pkl', 'rb') as f:
+with open('/home/john/sentiment_files/data/complete_vocab_15_word.pkl', 'rb') as f:
     data = pickle.load(f)
 vocab_to_index = data['vocab_to_index']
 index_to_vocab = data['index_to_vocab']
@@ -269,5 +269,5 @@ test_dict = {'input': data_x, 'target': data_y}
 print('Max value in test: ', test_dict['input'].max(1).max())
 print('Input shape ', data_x.shape)
 print('Target shape ', data_y.shape)
-with open('/home/john/sentiment_files/data/test.pkl', 'wb') as f:
+with open('/home/john/sentiment_files/data/complete_data_15_word/test/test.pkl', 'wb') as f:
     pickle.dump(test_dict, f)
