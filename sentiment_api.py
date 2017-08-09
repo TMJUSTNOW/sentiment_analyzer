@@ -35,7 +35,7 @@ def get_wordnet_pos(treebank_tag):
     else:
         return ''
 
-def predict_sentiment(clean_string):
+def predict_sentiment(clean_string, start):
 
     ##### Code for With out using Word2vec
 
@@ -120,15 +120,12 @@ def predict_sentiment(clean_string):
         if idx >= max_word:
             break
 
-
-    prediction = imdb_model.predict(input_data)
-    sess = tf.Session()
-    print('Prediction ', prediction)
-    score = sess.run(tf.nn.softmax(prediction))
+    score = imdb_model.predict(input_data)
+    print('Prediction ', score)
     prediction = np.argmax(score, axis=1)
 
     print('With a score of -Ve: {0}% +Ve: {1}%'.format(int(score[0][0]*100), int(score[0][1]*100)))
-    if abs(score[0][0] - score[0][1]) <= 0.15:
+    if abs(score[0][0] - score[0][1]) <= 0.05:
         print('Detected Sentiment Neutral')
     else:
         prediction = np.argmax(score, axis=1)
@@ -137,11 +134,12 @@ def predict_sentiment(clean_string):
         elif prediction == 1:
             print('Sentiment Detected Positive')
     print('Words Used for Prediction:  {0}'.format(stri))
+    print('Time taken ', time.time() - start)
+
 
     data = input('Provide sentence for sentiment Prediction:\n')
     start = time.time()
-    predict_sentiment(clean_string=data)
-    print('Time taken ', time.time() - start)
+    predict_sentiment(clean_string=data, start=start)
 
 def attach_model():
     # load json and create model
@@ -156,7 +154,7 @@ def attach_model():
     return loaded_model
 
 def load_vocab():
-    with open('/home/john/sentiment_files/data/movie_vocab.pkl', 'rb') as f:
+    with open('/home/john/sentiment_files/data/IMDB_data/movie_vocab.pkl', 'rb') as f:
         data = pickle.load(f)
     vocab_to_index = data['vocab_to_index']
     index_to_vocab = data['index_to_vocab']
@@ -169,5 +167,5 @@ def load_vocab():
 if __name__ == '__main__':
     data = input('Provide sentence for sentiment Prediction:\n')
     start = time.time()
-    predict_sentiment(clean_string=data)
+    predict_sentiment(clean_string=data, start=start)
     print('Time taken {0}'.format(time.time() - start))
