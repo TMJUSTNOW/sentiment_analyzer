@@ -25,7 +25,7 @@ train_neg = [each_file for each_file in os.listdir(train_neg_sample_dir) if os.p
 test_pos = [each_file for each_file in os.listdir(test_pos_sample_dir) if os.path.isfile(os.path.join(test_pos_sample_dir, each_file))]
 test_neg = [each_file for each_file in os.listdir(test_neg_sample_dir) if os.path.isfile(os.path.join(test_neg_sample_dir, each_file))]
 
-file_list = train_pos + train_neg + test_pos[:6250] + test_neg[:6250]
+file_list = test_pos[6250:] + test_neg[6250:]
 print(len(file_list))
 print(len(test_neg))
 idx_to_vocab = {}
@@ -139,7 +139,7 @@ word_lemmatizer = WordNetLemmatizer()
 # Convert data in to index and store it
 print('Loading data...')
 # (x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=max_features)
-with open('/home/john/sentiment_files/data/complete_vocab_15_word.pkl', 'rb') as f:
+with open('/home/janmejaya/sentiment_files/data/complete_vocab_15_word2.pkl', 'rb') as f:
     data = pickle.load(f)
 vocab_to_index = data['vocab_to_index']
 index_to_vocab = data['index_to_vocab']
@@ -192,8 +192,8 @@ def next_batch(batch_size, test=False):
         if index % 5000 == 0:
             print(index)
 
-        if index >= 25000:
-            test = True
+        # if index >= 25000:
+        #     test = True
 
         if test:
             pos_dir = test_pos_sample_dir
@@ -260,18 +260,18 @@ def next_batch(batch_size, test=False):
     target_data = np.array(target_data)
     return (input_data, target_data)
 
-data_x, data_y = next_batch(len(file_list))
-train_dict = {'input': data_x, 'target': data_y}
-print('Input shape ', data_x.shape)
-print('Target shape ', data_y.shape)
 
-with open('/home/john/sentiment_files/data/complete_data_15_word/test/test.pkl', 'wb') as f:
-    pickle.dump(test_dict, f)
-
-# data_x, data_y = next_batch(len(file_list), test=True)
-# test_dict = {'input': data_x, 'target': data_y}
-# print('Max value in test: ', test_dict['input'].max(1).max())
+# data_x, data_y = next_batch(len(file_list))
+# train_dict = {'input': data_x, 'target': data_y}
 # print('Input shape ', data_x.shape)
 # print('Target shape ', data_y.shape)
-# with open('/home/john/sentiment_files/data/test.pkl', 'wb') as f:
-#     pickle.dump(test_dict, f)
+# with open('/home/janmejaya/sentiment_files/data/complete_data_aug9/imdb_train.pkl', 'wb') as f:
+#     pickle.dump(train_dict, f)
+
+data_x, data_y = next_batch(len(file_list), test=True)
+test_dict = {'input': data_x, 'target': data_y}
+print('Max value in test: ', test_dict['input'].max(1).max())
+print('Input shape ', data_x.shape)
+print('Target shape ', data_y.shape)
+with open('/home/janmejaya/sentiment_files/data/complete_data_aug9/imdb_test.pkl', 'wb') as f:
+    pickle.dump(test_dict, f)
