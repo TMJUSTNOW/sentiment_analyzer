@@ -222,7 +222,7 @@ sentence_id = []
 
 # Convert data in to index and store it
 print('Loading data...')
-with open('/home/janmejaya/sentiment_files/data/complete_vocab_15_word.pkl', 'rb') as f:
+with open('/home/janmejaya/sentiment_files/data/complete_vocab_15_word2.pkl', 'rb') as f:
     data = pickle.load(f)
 vocab_to_index = data['vocab_to_index']
 index_to_vocab = data['index_to_vocab']
@@ -307,7 +307,7 @@ for idx, data in enumerate(df['Phrase'].tolist()):
         print('Count ', counter)
         train_dict = {'input': input_data, 'target': target_data}
         print('Saving Dictionary')
-        with open('/home/janmejaya/sentiment_files/data/complete_data/twitter_train{}.pkl'.format(idx), 'wb') as f:
+        with open('/home/janmejaya/sentiment_files/data/complete_data_aug9/twitter_train{}.pkl'.format(idx), 'wb') as f:
             pickle.dump(train_dict, f)
         target_data = []
         input_data = np.array([], np.float64)
@@ -327,5 +327,5 @@ print('Target data shape ', target_data.shape)
 
 train_dict = {'input': input_data, 'target': target_data}
 
-with open('/home/janmejaya/sentiment_files/data/complete_data/train2.pkl', 'wb') as f:
+with open('/home/janmejaya/sentiment_files/data/complete_data_aug9/twitter_last.pkl', 'wb') as f:
     pickle.dump(train_dict, f)
