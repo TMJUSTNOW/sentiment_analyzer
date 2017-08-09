@@ -14,10 +14,11 @@ from nltk.corpus import wordnet
 import enchant
 
 # Read data set(IMDB Review data)
-train_pos_sample_dir = '/home/janmejaya/sentiment_files/text_data/aclImdb/train/pos'
-train_neg_sample_dir = '/home/janmejaya/sentiment_files/text_data/aclImdb/train/neg'
-test_neg_sample_dir = '/home/janmejaya/sentiment_files/text_data/aclImdb/test/neg'
-test_pos_sample_dir = '/home/janmejaya/sentiment_files/text_data/aclImdb/test/pos'
+train_pos_sample_dir = '/home/john/geek_stuff/Data_Set/IMDB_sentiment_analysis_data/aclImdb/train/pos'
+train_neg_sample_dir = '/home/john/geek_stuff/Data_Set/IMDB_sentiment_analysis_data/aclImdb/train/neg'
+test_neg_sample_dir = '/home/john/geek_stuff/Data_Set/IMDB_sentiment_analysis_data/aclImdb/test/neg'
+test_pos_sample_dir = '/home/john/geek_stuff/Data_Set/IMDB_sentiment_analysis_data/aclImdb/test/pos'
+
 
 train_pos = [each_file for each_file in os.listdir(train_pos_sample_dir) if os.path.isfile(os.path.join(train_pos_sample_dir, each_file))]
 train_neg = [each_file for each_file in os.listdir(train_neg_sample_dir) if os.path.isfile(os.path.join(train_neg_sample_dir, each_file))]
@@ -34,10 +35,10 @@ len_vocab = 0
 index_to_start = 1      # 0th index is used for padding
 
 def get_wordnet_pos(treebank_tag):
-
-    if treebank_tag.startswith('J'):
-        return wordnet.ADJ
-    elif treebank_tag.startswith('V'):
+    ## Removed Adjective from pos tagging as word_lemmatizer convert superlative degree to original form
+    # if treebank_tag.startswith('J'):
+    #     return wordnet.ADJ
+    if treebank_tag.startswith('V'):
         return wordnet.VERB
     elif treebank_tag.startswith('N'):
         return wordnet.NOUN
@@ -258,6 +259,7 @@ def next_batch(batch_size, test=False):
             print('Lemmatized data ', lemmatized_data)
     target_data = np.array(target_data)
     return (input_data, target_data)
+
 
 # data_x, data_y = next_batch(len(file_list))
 # train_dict = {'input': data_x, 'target': data_y}

@@ -16,12 +16,16 @@ import collections
 import enchant
 
 
+
 df = pd.read_csv('/home/janmejaya/sentiment_files/text_data/Twitter_3class/training.1600000.processed.noemoticon.csv', encoding='latin-1', header=None)
 df.columns = ['Sentiment', 'NR1', 'NR2', 'NR3', 'NR4', 'Phrase']
 print(df.columns)
 
 # df = pd.DataFrame.from_csv('/home/janmejaya/sentiment_files/text_data/train.tsv', sep='\t')
 # print(df.columns)
+
+df = pd.DataFrame.from_csv('/home/john/geek_stuff/Data Set/Rotten_Tomatoes_sentiment_dataset/train.tsv', sep='\t')
+print(df.columns)
 
 
 # Break data into words and remove stop Words(or unnecessary words which doesn't have much influence on meaning)
@@ -160,6 +164,82 @@ vocab_frequency = {}
 sentiment_list = df['Sentiment'].tolist()
 print(len(sentiment_list))
 sentence_id = []
+
+for idx, data in enumerate(df['Phrase'].tolist()):
+    if sentiment_list[idx] not in [0, 4]:
+        continue
+    # Escape HTML char ir present
+    html_parser = html.parser.HTMLParser()
+    html_cleaned_data = html_parser.unescape(data)
+
+    # Keep important punctuation
+    html_cleaned_data = re.sub('[^A-Za-z ]+', '', html_cleaned_data)
+
+    # Performing Word Lemmatization on text
+    lemmatized_data = []
+    for word, typ in nltk.pos_tag(word_tokenize(html_cleaned_data)):
+        typ = get_wordnet_pos(typ)
+        if typ:
+            lemmatized_data.append(word_lemmatizer.lemmatize(word, typ))
+        else:
+            lemmatized_data.append(word_lemmatizer.lemmatize(word))
+
+    filtered_sentences = [w.strip(' ').lower() for w in lemmatized_data if
+                          w.strip(' ').lower() not in stop_words + movie_stop_words]
+
+    # Remove all non-english or mis-spelled words
+    # Using Hunspell (install pyhunspell and install required dictionary for hunspell)
+    # fillow this link : https://datascience.blog.wzb.eu/2016/07/13/autocorrecting-misspelled-words-in-python-using-hunspell/
+    ## TODO: 'didnt', 'couldnt' are identified as false by dictionary. create exception for them
+    enchant_dict = enchant.Dict("en_US")
+    correct_spell_word = [word for word in filtered_sentences if enchant_dict.check(word)]
+
+    # create word to index and index to word dictionary
+    vocab = set(correct_spell_word)
+    for indx, val in enumerate(vocab):
+        # Count frequency of the Word
+        if val in vocab_frequency:
+            vocab_frequency[val] += 1
+        else:
+            vocab_frequency[val] = 1
+
+frequent_words_tuple = sorted(vocab_frequency.items(), key=lambda x: x[1], reverse=True)
+frequent_words = [val for val, freq in frequent_words_tuple][:1000]
+print(frequent_words)
+print(frequent_words_tuple[:1000])
+print('Len of vocab ', len(frequent_words_tuple))
+# print(collections.Counter(word_len))
+idx = 1
+vocab_to_idx, idx_to_vocab = {}, {}
+vocab_to_idx['<pad>'] = 0
+idx_to_vocab[0] = '<pad>'
+for val, freq in frequent_words_tuple:
+    vocab_to_idx[val] = idx
+    idx_to_vocab[idx] = val
+    idx += 1
+print('Saving Dictionary')
+print('Index: {0} (conform vocab len)'.format(idx))
+dictionary = {'vocab_to_index': vocab_to_idx, 'index_to_vocab': idx_to_vocab, 'vocab_frequency_tuple': frequent_words_tuple}
+with open('/home/john/sentiment_files/data/rotten_movie_vocab.pkl', 'wb') as f:
+    pickle.dump(dictionary, f)
+
+# # Convert data in to index and store it
+# print('Loading data...')
+# with open('/home/john/sentiment_files/data/complete_vocab_15_word.pkl', 'rb') as f:
+#     data = pickle.load(f)
+# vocab_to_index = data['vocab_to_index']
+# index_to_vocab = data['index_to_vocab']
+# vocab_frequency_tuple = data['vocab_frequency_tuple']
+# vocab_len = len(data['vocab_to_index'])
+# print('Vocab len: ', vocab_len)
+#
+# max_word = 15
+# max_features = 25000
+# count = 0
+# target_data = []
+# input_data = np.array([], int)
+# counter = 0
+
 # for idx, data in enumerate(df['Phrase'].tolist()):
 #     if sentiment_list[idx] not in [0, 4]:
 #         continue
