@@ -1,7 +1,14 @@
 import requests
 from bs4 import BeautifulSoup
+import dateutil.parser as dparser
+from datetime import datetime
+from keras.models import model_from_json
+import time
+import re
 
+from sentiment_api import predict_sentiment
 
+import difflib
 
 
 
@@ -23,13 +30,52 @@ class collect_news():
         print('URL:\n{0}'.format(URL.format('Apple Inc', 8, 9, 8, 17)))
         print(response.content)
 
-    def yahoo_rss_news(self, stock_symbol_list):
+    def yahoo_rss_news(self, stock_symbol='aapl'):
         rss_req_url = 'http://finance.yahoo.com/rss/headline?s={0}'
-        resp = requests.get(rss_req_url.format('yhoo'))
-        print(resp.content)
+        resp = requests.get(rss_req_url.format(stock_symbol))
         soup = BeautifulSoup(resp.content, 'html.parser')
-        print(soup.prettify())
 
+        symbol_lookup_url = 'http://d.yimg.com/autoc.finance.yahoo.com/autoc?query={}&region=1&lang=en'
+        symbol_resp = requests.get(symbol_lookup_url.format(stock_symbol)).json()
+        company_name = ''
+        for result_dict in symbol_resp['ResultSet']['Result']:
+            if result_dict['exchDisp'] in ['NASDAQ', 'NYSE']:
+                company_name = result_dict['name']
+                break
+        news_list = []
+        for each_item in soup.find_all('item'):
+            if dparser.parse(str(each_item.pubdate.string)).day == datetime.utcnow().day:
+                description = each_item.description.string
+                if description:
+                    news_list.append(description)
+
+        with open('/home/john/sentiment_files/Model_and_data/complete_sentiment_15_word_new.json',
+                  'r') as json_file:
+            loaded_model_json = json_file.read()
+        loaded_model = model_from_json(loaded_model_json)
+        # load weights into new model
+        loaded_model.load_weights("/home/john/sentiment_files/Model_and_data/complete_sentiment_15_word_new.h5")
+        print("Loaded model from disk")
+        if news_list:
+            for each_news in news_list:
+                ## Find subject of interest (company which we are intrested)
+                # TODO: Find 'NP'-> Noun Phrase from sentence(simple/complex)(it should be company name)
+                # Use NLTK for this (http://www.nltk.org/book/ch08.html)
+
+                ## Presently i am assuming first word in company name and finding that NEWS
+                company_name = re.sub('[^A-Za-z ]+', '', company_name)
+                if company_name.split(' ')[0] in each_news or stock_symbol in each_news:
+                    score = predict_sentiment(model=loaded_model, clean_string=each_news)
+                    if abs(score[0] - score[1]) >= 0.15:
+                        if score[0] > score[1]:
+                            print('News:> {0}'.format(each_news))
+                            print('Predicted Sentiment: Negative\n')
+                        else:
+                            print('News:> {0}'.format(each_news))
+                            print('Predicted Sentiment: Positive\n')
+        else:
+            print('No news Found for Stock Symbol: {0}'.format(stock_symbol))
 
 if __name__ == '__main__':
-    collect_news().yahoo_rss_news('')
+    stock_symbol = input('Please Provide a Stock Symbol: ')
+    collect_news().yahoo_rss_news(stock_symbol=stock_symbol)

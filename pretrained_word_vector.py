@@ -46,7 +46,7 @@ def recall(y_true, y_pred):
     return recall_val
 
 
-with open('/home/john/sentiment_files/data/complete_data_15_word/complete_vocab_15_word.pkl', 'rb') as f:
+with open('/home/john/sentiment_files/data/complete_data_aug9/complete_vocab_15_word2.pkl', 'rb') as f:
     vocab_data = pickle.load(f)
 
 
@@ -56,6 +56,7 @@ model.add(Masking(mask_value=0, input_shape=(max_word, 300)))
 # model.add(TimeDistributed(Dense(50, activation='relu'), input_shape=(max_word, 300)))
 # model.add(Dropout(0.4))
 model.add(LSTM(state_size, dropout=0.4, recurrent_dropout=0.5, activation='relu'))
+# model.add(TimeDistributedMerge(mode='sum'))
 # model.add(Flatten())
 # model.add(Dropout(0.4))
 model.add(Dense(2, activation='softmax'))
@@ -90,20 +91,37 @@ def extract_data_batch_from_dir(data_dir, batch_size):
     global start_idx, each_file_data_len
     start_idx = 0
     each_file_data_len = 0
+    file_list_len = len(file_list)
+    n_file_to_combine = file_list_len
     while True:
         if start_idx+batch_size >= each_file_data_len:
             # Read from a New file
             start_idx = 0
-            data_file = file_list.pop(0)
-            file_list += [data_file]          # Storing at end of file so loop will continue indefinitely
-            print('processing file: {0}'.format(data_file))
-            with open(os.path.join(data_dir, data_file), 'rb') as f:
-                data = pickle.load(f)
-                each_file_data_len = len(data['input'])
-                perm = np.arange(each_file_data_len)
-                np.random.shuffle(perm)
-                data['input'] = data['input'][perm]
-                data['target'] = data['target'][perm]
+            file_to_combine = []
+            if file_list_len >= n_file_to_combine:
+                for i in np.random.choice(file_list_len, n_file_to_combine, replace=False):
+                    data_file = file_list.pop(i)
+                    file_to_combine.append(data_file)
+                    file_list += [data_file]          # Storing at end of file so loop will continue indefinitely
+            else:
+                file_to_combine = file_list
+
+            print('processing file: {0}'.format(file_to_combine))
+            for idx, file in enumerate(file_to_combine):
+                with open(os.path.join(data_dir, file), 'rb') as f:
+                    data = pickle.load(f)
+                if idx == 0:
+                    data_input = data['input']
+                    data_target = data['target']
+                else:
+                    data_input = np.concatenate((data_input, data['input']), axis=0)
+                    data_target = np.concatenate((data_target, data['target']), axis=0)
+            # when 'data_input' uninitialized it should throw error
+            each_file_data_len = len(data_input)
+            perm = np.arange(each_file_data_len)
+            np.random.shuffle(perm)
+            data['input'] = data_input[perm]
+            data['target'] = data_target[perm]
 
         input_data = np.zeros([batch_size, max_word, 300], np.float64)
         for id1, each_data in enumerate(data['input'][start_idx:start_idx + batch_size]):
@@ -126,13 +144,13 @@ def extract_data_batch_from_dir(data_dir, batch_size):
 word_vectors = KeyedVectors.load_word2vec_format('/home/john/geek_stuff/Data_Set/Google_News_corpus/GoogleNews-vectors-negative300.bin', binary=True)
 
 
-train_dir = '/home/john/sentiment_files/data/complete_data_15_word/train'
+train_dir = '/home/john/sentiment_files/data/complete_data_aug9/train'
 len_input = get_len_of_data(train_dir)
 print('Length of input data {0}'.format(len_input))
 data_generator = extract_data_batch_from_dir(train_dir, batch_size)
-model.fit_generator(data_generator, steps_per_epoch=len_input//batch_size, nb_epoch=3, callbacks=callbacks_list)
+model.fit_generator(data_generator, steps_per_epoch=len_input//batch_size, nb_epoch=10, callbacks=callbacks_list)
 
-test_dir = '/home/john/sentiment_files/data/complete_data_15_word/test'
+test_dir = '/home/john/sentiment_files/data/complete_data_aug9/test'
 len_input = get_len_of_data(test_dir)
 print('Length of test data {0}'.format(len_input))
 data_generator = extract_data_batch_from_dir(test_dir, batch_size)
