@@ -35,7 +35,7 @@ def get_wordnet_pos(treebank_tag):
     else:
         return ''
 
-def predict_sentiment(model, clean_string, start=0):
+def predict_sentiment(model, clean_string_list, start=0):
 
     ##### Code for With out using Word2vec
 
@@ -47,26 +47,25 @@ def predict_sentiment(model, clean_string, start=0):
     model.compile(loss='binary_crossentropy', optimizer='adagrad', metrics=['accuracy'])
     frequent_words = [val for val, freq in vocab_frequency_tuple][:max_features]
     word_lemmatizer = WordNetLemmatizer()
-    clean_string = re.sub('[^A-Za-z ]+', '', clean_string)
-    input_data = np.zeros([1, max_word], dtype=np.float64)
-    lemmatized_data = []
-    for word, typ in nltk.pos_tag(word_tokenize(clean_string)):
-        typ = get_wordnet_pos(typ)
-        if typ:
-            lemmatized_data.append(word_lemmatizer.lemmatize(word, typ))
-        else:
-            lemmatized_data.append(word_lemmatizer.lemmatize(word))
-    truncated_data = []
-    for each_word in list(map(str.lower, lemmatized_data)):
-        if each_word in frequent_words:
-            truncated_data.append(vocab_to_index[each_word])
-            if len(truncated_data) >= max_word:
-                break
-    # Perform Extra Padding
-    if len(truncated_data) < max_word:
-        truncated_data += [0] * (max_word - len(truncated_data))
+    input_data = np.zeros([len(clean_string_list), max_word], dtype=np.float64)
+    for idx, each_string in enumerate(clean_string_list):
+        clean_string = re.sub('[^A-Za-z ]+', '', each_string)
+        truncated_data = []
+        for word, typ in nltk.pos_tag(word_tokenize(clean_string)):
+            typ = get_wordnet_pos(typ)
+            if typ:
+                lemmatized_word = word_lemmatizer.lemmatize(word, typ).lower()
+            else:
+                lemmatized_word = word_lemmatizer.lemmatize(word).lower()
 
-    input_data[0] = truncated_data
+            if lemmatized_word in frequent_words:
+                truncated_data.append(vocab_to_index[lemmatized_word])
+                if len(truncated_data) >= max_word:
+                    break
+
+        if len(truncated_data) < max_word:
+            truncated_data += [0] * (max_word - len(truncated_data))
+        input_data[idx] = truncated_data
     score = model.predict(input_data)
 
     stri = ''
@@ -133,23 +132,23 @@ def predict_sentiment(model, clean_string, start=0):
     #         print('Sentiment Detected Positive')
     # print('Words Used for Prediction:  {0}'.format(stri))
 
-    return score[0]
+    return score
 
 def attach_model():
     # load json and create model
-    with open('/home/john/sentiment_files/Model_and_data/complete_sentiment_15_word_new.json', 'r') as json_file:
+    with open('/home/janmejaya/sentiment_files/Model_and_data/complete_sentiment_15_word_new.json', 'r') as json_file:
         loaded_model_json = json_file.read()
 
     loaded_model = model_from_json(loaded_model_json)
     # load weights into new model
-    loaded_model.load_weights("/home/john/sentiment_files/Model_and_data/complete_sentiment_15_word_new.h5")
+    loaded_model.load_weights("/home/janmejaya/sentiment_files/Model_and_data/complete_sentiment_15_word_new.h5")
     print("Loaded model from disk")
 
     return loaded_model
 
 def load_vocab():
 
-    with open('/home/john/sentiment_files/Model_and_data/complete_vocab_15_word.pkl', 'rb') as f:
+    with open('/home/janmejaya/sentiment_files/Model_and_data/complete_vocab_15_word.pkl', 'rb') as f:
         data = pickle.load(f)
     vocab_to_index = data['vocab_to_index']
     index_to_vocab = data['index_to_vocab']
@@ -165,7 +164,7 @@ if __name__ == '__main__':
         data = input('Provide sentence for sentiment Prediction:\n')
         if data:
             start = time.time()
-            predict_sentiment(model=model, clean_string=data, start=start)
+            predict_sentiment(model=model, clean_string_list=[data], start=start)
             print('Time taken {0}'.format(time.time() - start))
         else:
             break

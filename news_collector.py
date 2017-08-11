@@ -5,6 +5,7 @@ from datetime import datetime
 from keras.models import model_from_json
 import time
 import re
+import nltk
 
 from sentiment_api import predict_sentiment
 
@@ -43,36 +44,42 @@ class collect_news():
                 company_name = result_dict['name']
                 break
         news_list = []
+        company_name = re.sub('[^A-Za-z ]+', '', company_name)
         for each_item in soup.find_all('item'):
             if dparser.parse(str(each_item.pubdate.string)).day == datetime.utcnow().day:
                 description = each_item.description.string
                 if description:
-                    news_list.append(description)
+                    ## Find subject of interest (company which we are intrested)
+                    #     # TODO: Find 'NP'-> Noun Phrase from sentence(simple/complex)(it should be company name)
+                    #     # Use NLTK for this (http://www.nltk.org/book/ch08.html)
+                    taged_description = nltk.tag.pos_tag(nltk.tokenize.word_tokenize(description))
+                    for each_tag in taged_description:
+                        if each_tag[1] == 'NNP':
+                            if each_tag[0] in [company_name.split(' ')[0], stock_symbol]:
+                                news_list.append(description)
+                            break
 
-        with open('/home/john/sentiment_files/Model_and_data/complete_sentiment_15_word_new.json',
-                  'r') as json_file:
+        start = time.time()
+        with open('/home/janmejaya/sentiment_files/Model_and_data/complete_sentiment_15_word_new.json', 'r') as json_file:
             loaded_model_json = json_file.read()
         loaded_model = model_from_json(loaded_model_json)
         # load weights into new model
-        loaded_model.load_weights("/home/john/sentiment_files/Model_and_data/complete_sentiment_15_word_new.h5")
+        loaded_model.load_weights("/home/janmejaya/sentiment_files/Model_and_data/complete_sentiment_15_word_new.h5")
         print("Loaded model from disk")
+        print("Time Taken to load model: {0}".format(time.time() - start))
+        start2 = time.time()
         if news_list:
-            for each_news in news_list:
-                ## Find subject of interest (company which we are intrested)
-                # TODO: Find 'NP'-> Noun Phrase from sentence(simple/complex)(it should be company name)
-                # Use NLTK for this (http://www.nltk.org/book/ch08.html)
+            score = predict_sentiment(model=loaded_model, clean_string_list=news_list)
+            print('Time for sentiment prediction: {0}'.format(time.time() - start2))
+            for idx, each_news in enumerate(news_list):
 
-                ## Presently i am assuming first word in company name and finding that NEWS
-                company_name = re.sub('[^A-Za-z ]+', '', company_name)
-                if company_name.split(' ')[0] in each_news or stock_symbol in each_news:
-                    score = predict_sentiment(model=loaded_model, clean_string=each_news)
-                    if abs(score[0] - score[1]) >= 0.15:
-                        if score[0] > score[1]:
-                            print('News:> {0}'.format(each_news))
-                            print('Predicted Sentiment: Negative\n')
-                        else:
-                            print('News:> {0}'.format(each_news))
-                            print('Predicted Sentiment: Positive\n')
+                if abs(score[idx][0] - score[idx][1]) >= 0.15:
+                    if score[idx][0] > score[idx][1]:
+                        print('News:> {0}'.format(each_news))
+                        print('Predicted Sentiment: Negative\n')
+                    else:
+                        print('News:> {0}'.format(each_news))
+                        print('Predicted Sentiment: Positive\n')
         else:
             print('No news Found for Stock Symbol: {0}'.format(stock_symbol))
 
