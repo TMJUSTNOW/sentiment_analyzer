@@ -6,11 +6,12 @@
 
 from keras.preprocessing import sequence
 from keras.models import Sequential
-from keras.layers import Dense, Embedding, Masking, LSTM, Conv1D, MaxPooling1D, Flatten, Dropout
+from keras.layers import Dense, Embedding, Masking, LSTM, Conv1D, MaxPooling1D, Flatten, Dropout, TimeDistributed, Lambda
 from keras.datasets import imdb
 import numpy as np
 from nltk.tokenize import word_tokenize
 import tensorflow as tf
+from keras import backend as K
 
 import pickle
 import os
@@ -19,7 +20,7 @@ import time
 
 print('Loading data...')
 # (x_train, y_train), (x_test, y_test) = imdb.load_data(num_words=max_features)
-with open('/home/john/sentiment_files/data/movie_vocab.pkl', 'rb') as f:
+with open('/home/john/sentiment_files/data/twitter_vocab.pkl', 'rb') as f:
     data = pickle.load(f)
 print(len(data['vocab_to_index']))
 vocab_to_index = data['vocab_to_index']
@@ -123,11 +124,20 @@ batch_size = 30
 state_size = 25
 n_classes = 2
 
+def td_sum(x):
+    return K.sum(x, axis=1)
+
 print('Build model...')
 model = Sequential()
 model.add(Masking(mask_value=0, input_shape=(max_word, )))
+print('MAsking Model input shape {0} output shape {1}'.format(model.input_shape, model.output_shape))
 model.add(Embedding(max_features, 1000))
-model.add(LSTM(state_size, dropout=0.5, recurrent_dropout=0.5))
+print('EMBEDING Model input shape {0} output shape {1}'.format(model.input_shape, model.output_shape))
+model.add(LSTM(state_size, dropout=0.5, recurrent_dropout=0.5, return_sequences=True))
+print('Model input shape {0} output shape {1}'.format(model.input_shape, model.output_shape))
+model.add(Lambda(td_sum))
+print('Model input shape {0} output shape {1}'.format(model.input_shape, model.output_shape))
+time.sleep(100)
 model.add(Dense(2, activation='softmax'))
 # model.add(Dense(1, activation='sigmoid'))
 

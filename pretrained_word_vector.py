@@ -1,6 +1,6 @@
 from keras.preprocessing import sequence
 from keras.models import Sequential
-from keras.layers import Dense, Embedding, Masking, LSTM, Flatten, Dropout, TimeDistributed
+from keras.layers import Dense, Embedding, Masking, LSTM, Flatten, Dropout, TimeDistributed, Lambda
 from keras.datasets import imdb
 import numpy as np
 from nltk.tokenize import word_tokenize
@@ -18,8 +18,8 @@ import time
 
 # Parameters
 max_word = 15
-batch_size = 500
-state_size = 15
+batch_size = 32
+state_size = 60
 n_classes = 2
 
 
@@ -45,31 +45,33 @@ def recall(y_true, y_pred):
 
     return recall_val
 
+def sum_pooling(x):
+    return K.sum(x, axis=1)
 
-with open('/home/john/sentiment_files/data/complete_data_aug9/complete_vocab_15_word2.pkl', 'rb') as f:
+with open('/home/john/sentiment_files/data/cornel_univ_movie_data/cornel_univ_movie_vocab.pkl', 'rb') as f:
     vocab_data = pickle.load(f)
 
 
 print('Build model...')
 model = Sequential()
 model.add(Masking(mask_value=0, input_shape=(max_word, 300)))
-# model.add(TimeDistributed(Dense(50, activation='relu'), input_shape=(max_word, 300)))
-# model.add(Dropout(0.4))
-model.add(LSTM(state_size, dropout=0.4, recurrent_dropout=0.5, activation='relu'))
-# model.add(TimeDistributedMerge(mode='sum'))
+model.add(TimeDistributed(Dense(150, activation='relu')))
+model.add(Dropout(0.4))
+model.add(LSTM(state_size, dropout=0.4, recurrent_dropout=0.5, activation='relu', return_sequences=False))
+# model.add(Lambda(sum_pooling))
 # model.add(Flatten())
 # model.add(Dropout(0.4))
 model.add(Dense(2, activation='softmax'))
 
-model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer='adagrad', metrics=['accuracy'])
 
-# Loading Saved Weights
-# model.load_weights("complete_pretrained_check_point_weights.hdf5")
-
-## Saving Model at every epoch
-filepath="complete_pretrained_check_point_weights.hdf5"
-checkpoint = ModelCheckpoint(filepath, verbose=1, save_best_only=False, save_weights_only=True, period=1)
-callbacks_list = [checkpoint]
+# # Loading Saved Weights
+# model.load_weights("complete_pretrained_check_point_weights_dense+LSTM.hdf5")
+#
+# ## Saving Model at every epoch
+# filepath="complete_pretrained_check_point_weights_dense+LSTM.hdf5"
+# checkpoint = ModelCheckpoint(filepath, verbose=1, save_best_only=False, save_weights_only=True, period=1)
+# callbacks_list = [checkpoint]
 
 
 def get_len_of_data(data_dir):
@@ -97,12 +99,9 @@ def extract_data_batch_from_dir(data_dir, batch_size):
         if start_idx+batch_size >= each_file_data_len:
             # Read from a New file
             start_idx = 0
-            file_to_combine = []
+
             if file_list_len >= n_file_to_combine:
-                for i in np.random.choice(file_list_len, n_file_to_combine, replace=False):
-                    data_file = file_list.pop(i)
-                    file_to_combine.append(data_file)
-                    file_list += [data_file]          # Storing at end of file so loop will continue indefinitely
+                file_to_combine = [file_list[i] for i in np.random.choice(file_list_len, n_file_to_combine, replace=False)]
             else:
                 file_to_combine = file_list
 
@@ -144,26 +143,30 @@ def extract_data_batch_from_dir(data_dir, batch_size):
 word_vectors = KeyedVectors.load_word2vec_format('/home/john/geek_stuff/Data_Set/Google_News_corpus/GoogleNews-vectors-negative300.bin', binary=True)
 
 
-train_dir = '/home/john/sentiment_files/data/complete_data_aug9/train'
+train_dir = '/home/john/sentiment_files/data/cornel_univ_movie_data/train'
+val_dir = '/home/john/sentiment_files/data/cornel_univ_movie_data/val'
+
 len_input = get_len_of_data(train_dir)
 print('Length of input data {0}'.format(len_input))
 data_generator = extract_data_batch_from_dir(train_dir, batch_size)
-model.fit_generator(data_generator, steps_per_epoch=len_input//batch_size, nb_epoch=10, callbacks=callbacks_list)
+# val_data_generator = extract_data_batch_from_dir(val_dir, batch_size=940)
+model.fit_generator(data_generator, steps_per_epoch=len_input//batch_size, nb_epoch=8, callbacks=None, verbose=1,
+                    validation_data=None, validation_steps=None)
 
-test_dir = '/home/john/sentiment_files/data/complete_data_aug9/test'
+test_dir = '/home/john/sentiment_files/data/cornel_univ_movie_data/test'
 len_input = get_len_of_data(test_dir)
 print('Length of test data {0}'.format(len_input))
 data_generator = extract_data_batch_from_dir(test_dir, batch_size)
 score, acc = model.evaluate_generator(data_generator, steps=len_input//batch_size)
 print('ERROR: {0}, Accuracy: {1}'.format(score, acc))
 
-# serialize model to JSON
-model_json = model.to_json()
-with open('/home/john/sentiment_files/model/complete_pre_trained.json', "w") as json_file:
-    json_file.write(model_json)
-# serialize weights to HDF5
-model.save_weights("/home/john/sentiment_files/model/complete_pre_trained.h5")
-print("Saved model to disk")
+# # serialize model to JSON
+# model_json = model.to_json()
+# with open('/home/john/sentiment_files/model/complete_pre_trained_dense+LSTM.json', "w") as json_file:
+#     json_file.write(model_json)
+# # serialize weights to HDF5
+# model.save_weights("/home/john/sentiment_files/model/complete_pre_trained_dense+LSTM.h5")
+# print("Saved model to disk")
 
 
 # for data in extract_data_batch_from_dir('/home/john/sentiment_files/data/complete_data_15_word/train', batch_size):
