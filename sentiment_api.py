@@ -136,7 +136,7 @@ movie_stop_words = ['actors', 'actor', 'idea', 'ca', 'provide', 'old', 'timeless
                     'drama', 'theyre', 'yeah', 'com', 'itbr', 'genre']
 
 word_vectors = KeyedVectors.load_word2vec_format(
-        '/home/john/geek_stuff/Data_Set/Google_News_corpus/GoogleNews-vectors-negative300.bin', binary=True, limit=None)
+        '/home/janmejaya/Downloads/GoogleNews-vectors-negative300.bin', binary=True, limit=None)
 
 def get_wordnet_pos(treebank_tag):
 

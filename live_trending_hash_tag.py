@@ -94,10 +94,15 @@ def find_ewma():
 
 
 if __name__ == '__main__':
-    api_key = input('Provide Consumer Key: ')
-    api_secret_key = input('Provide Consumer Secret key: ')
-    api_access_key = input('Provide Access Key: ')
-    api_access_secret_key = input('Provide Access Secret Key: ')
+    # api_key = input('Provide Consumer Key: ')
+    # api_secret_key = input('Provide Consumer Secret key: ')
+    # api_access_key = input('Provide Access Key: ')
+    # api_access_secret_key = input('Provide Access Secret Key: ')
+
+    api_key = 'BMaRbtElbiTtZiV8B21yD5nAa'
+    api_secret_key = 'nYoxVIHJsjhHDpNCESXkKiTOBgrGs4O34QkBtDDAjlshKFaSNs'
+    api_access_key = '884591331779031040-qGeQFpCrHGaJFnhCKk4BUIBLn0cWhr1'
+    api_access_secret_key = 'QeV2ppw3R71hNvA1zwS5Tmz0t6OXedOF6ma0VAlVLNMUW'
     title = input('Provide a input to Search: ')
     print('Trending Tags are shown in every {0}sec\n'.format(disp_time))
     try:
