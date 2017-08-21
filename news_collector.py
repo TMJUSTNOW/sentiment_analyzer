@@ -1,18 +1,48 @@
 import requests
 import dateutil.parser as dparser
 from datetime import datetime
-from multiprocessing import Pool
+import multiprocessing
 import time
 import re
+import json
+import html
 
 from keras.models import model_from_json
 import nltk
 from bs4 import BeautifulSoup
 import tweepy
-
-from sentiment_api import predict_sentiment
-
+from tweepy.api import API
+import pandas as pd
+from nltk.tokenize import word_tokenize
 import difflib
+
+# from sentiment_api import predict_sentiment
+
+df = pd.read_csv('/home/janmejaya/sentiment_analyzer/symbol_to_entity_mapping.csv')
+stock_symbol = df['stock_symbol'].tolist()
+entity_name = df['entityname'].tolist()
+class TweepyListener(tweepy.StreamListener):
+
+    def __init__(self, api=None):
+        self.api = api or API()
+        self.news_list = []
+
+
+    def on_data(self, encoded_data):
+
+        decoded_data = json.loads(encoded_data)
+        cleaned_data = re.sub('[^A-Za-z ]+', '', decoded_data)
+        if any([word for word in word_tokenize(cleaned_data) if word in stock_symbol or word in entity_name]):
+            self.news_list.append(cleaned_data)
+
+        if int(time.time()) % 1000 == 0:
+            print('Writting Data to file')
+            with open('live_news_data.txt', mode='a') as file:
+                for news in self.news_list:
+                    file.writelines(news)
+            self.news_list = []
+
+        return True
 
 
 
@@ -158,8 +188,25 @@ class collect_news():
         else:
             print('There are No Tweets Today for Stock Symbol: {0}'.format(stock_symbol))
 
+    def collect_live_twitter_data(self):
+
+        api_key = 'BMaRbtElbiTtZiV8B21yD5nAa'
+        api_secret_key = 'nYoxVIHJsjhHDpNCESXkKiTOBgrGs4O34QkBtDDAjlshKFaSNs'
+        api_access_key = '884591331779031040-qGeQFpCrHGaJFnhCKk4BUIBLn0cWhr1'
+        api_access_secret_key = 'QeV2ppw3R71hNvA1zwS5Tmz0t6OXedOF6ma0VAlVLNMUW'
+        title = input('Provide a input to Search: ')
+        try:
+            auth = tweepy.OAuthHandler(api_key, api_secret_key)
+            auth.set_access_token(api_access_key, api_access_secret_key)
+            overwrite_listener_obj = TweepyListener()
+            stream_api = tweepy.Stream(auth=auth, listener=overwrite_listener_obj)
+            stream_api.filter(track=[title])
+        except Exception as exc:
+            print('Exception occurred during Authenticating or searching: {0}'.format(exc))
+
 
 if __name__ == '__main__':
-    stock_symbol = input('Please Provide a Stock Symbol: ')
+    # stock_symbol = input('Please Provide a Stock Symbol: ')
     # collect_news().yahoo_rss_news(stock_symbol=stock_symbol)
-    collect_news().twitter_news_collector(stock_symbol)
+    # collect_news().twitter_news_collector(stock_symbol)
+    collect_news().collect_live_twitter_data()
