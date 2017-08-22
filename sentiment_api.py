@@ -136,7 +136,7 @@ movie_stop_words = ['actors', 'actor', 'idea', 'ca', 'provide', 'old', 'timeless
                     'drama', 'theyre', 'yeah', 'com', 'itbr', 'genre']
 
 word_vectors = KeyedVectors.load_word2vec_format(
-        '/home/janmejaya/Downloads/GoogleNews-vectors-negative300.bin', binary=True, limit=None)
+        '/home/john/geek_stuff/Data_Set/Google_News_corpus/GoogleNews-vectors-negative300.bin', binary=True, limit=None)
 
 def get_wordnet_pos(treebank_tag):
 
@@ -158,38 +158,38 @@ def predict_sentiment(model, clean_string_list, start=0):
 
     vocab_to_index, index_to_vocab, vocab_frequency_tuple = load_vocab()
     # Model Parameters
-    max_word = 15
-    max_features = 25000
-    # evaluate loaded model on test data
-    model.compile(loss='binary_crossentropy', optimizer='adagrad', metrics=['accuracy'])
-    frequent_words = [val for val, freq in vocab_frequency_tuple][:max_features]
-    word_lemmatizer = WordNetLemmatizer()
-    input_data = np.zeros([len(clean_string_list), max_word], dtype=np.float64)
-    for idx, each_string in enumerate(clean_string_list):
-        clean_string = re.sub('[^A-Za-z ]+', '', each_string)
-        truncated_data = []
-        for word, typ in nltk.pos_tag(word_tokenize(clean_string)):
-            typ = get_wordnet_pos(typ)
-            if typ:
-                lemmatized_word = word_lemmatizer.lemmatize(word, typ).lower()
-            else:
-                lemmatized_word = word_lemmatizer.lemmatize(word).lower()
+    # max_word = 15
+    # max_features = 25000
+    # # evaluate loaded model on test data
+    # model.compile(loss='binary_crossentropy', optimizer='adagrad', metrics=['accuracy'])
+    # frequent_words = [val for val, freq in vocab_frequency_tuple][:max_features]
+    # word_lemmatizer = WordNetLemmatizer()
+    # input_data = np.zeros([len(clean_string_list), max_word], dtype=np.float64)
+    # for idx, each_string in enumerate(clean_string_list):
+    #     clean_string = re.sub('[^A-Za-z ]+', '', each_string)
+    #     truncated_data = []
+    #     for word, typ in nltk.pos_tag(word_tokenize(clean_string)):
+    #         typ = get_wordnet_pos(typ)
+    #         if typ:
+    #             lemmatized_word = word_lemmatizer.lemmatize(word, typ).lower()
+    #         else:
+    #             lemmatized_word = word_lemmatizer.lemmatize(word).lower()
+    #
+    #         if lemmatized_word in frequent_words:
+    #             truncated_data.append(vocab_to_index[lemmatized_word])
+    #             if len(truncated_data) >= max_word:
+    #                 break
+    #
+    #     if len(truncated_data) < max_word:
+    #         truncated_data += [0] * (max_word - len(truncated_data))
+    #     input_data[idx] = truncated_data
+    # score = model.predict(input_data)
 
-            if lemmatized_word in frequent_words:
-                truncated_data.append(vocab_to_index[lemmatized_word])
-                if len(truncated_data) >= max_word:
-                    break
-
-        if len(truncated_data) < max_word:
-            truncated_data += [0] * (max_word - len(truncated_data))
-        input_data[idx] = truncated_data
-    score = model.predict(input_data)
-
-    stri = ''
-    for idx in input_data[0]:
-        if idx == 0:
-            continue
-        stri += ' ' + index_to_vocab[idx]
+    # stri = ''
+    # for idx in input_data[0]:
+    #     if idx == 0:
+    #         continue
+    #     stri += ' ' + index_to_vocab[idx]
 
     # print('With a score of -Ve: {0}% +Ve: {1}%'.format(int(score[0][0]*100), int(score[0][1]*100)))
     # if abs(score[0][0] - score[0][1]) <= 0.15:
@@ -207,46 +207,48 @@ def predict_sentiment(model, clean_string_list, start=0):
 
     model.compile(loss='binary_crossentropy', optimizer='adagrad', metrics=['accuracy'])
     word_lemmatizer = WordNetLemmatizer()
-    clean_string = re.sub('[^A-Za-z ]+', '', clean_string)
 
-    input_data = np.zeros([1, max_word, 300], dtype=np.float64)
-    idx = 0
-    stri = ''
-    for word, typ in nltk.pos_tag(word_tokenize(clean_string)):
-        if word in stop_words+movie_stop_words or typ in ['NNP', 'NNS']:
-            # Removing all stop words and Noun phrases from testing
-            print('Word in stop word or noun {0}=== type {1}'.format(word, typ))
-            continue
-        typ = get_wordnet_pos(typ)
-        if typ:
-            lemmatized_word = word_lemmatizer.lemmatize(word, typ).lower()
-        else:
-            lemmatized_word = word_lemmatizer.lemmatize(word).lower()
+    input_data = np.zeros([len(clean_string_list), max_word, 300], dtype=np.float64)
+    for index, clean_string in enumerate(clean_string_list):
+        clean_string = re.sub('[^A-Za-z ]+', '', clean_string)
+        idx = 0
+        stri = ''
+        for word, typ in nltk.pos_tag(word_tokenize(clean_string)):
+            if word in stop_words+movie_stop_words or typ in ['NNP', 'NNS']:
+                # Removing all stop words and Noun phrases from testing
+                # print('Word in stop word or noun {0}=== type {1}'.format(word, typ))
+                continue
+            typ = get_wordnet_pos(typ)
+            if typ:
+                lemmatized_word = word_lemmatizer.lemmatize(word, typ).lower()
+            else:
+                lemmatized_word = word_lemmatizer.lemmatize(word).lower()
 
-        try:
-            input_data[0, idx] = word_vectors[lemmatized_word]
-            idx += 1
-            stri += ' ' + lemmatized_word
-        except Exception as exc:
-            print('word not in vec dict ', lemmatized_word)
-            continue
+            try:
+                input_data[index, idx] = word_vectors[lemmatized_word]
+                idx += 1
+                stri += ' ' + lemmatized_word
+            except Exception as exc:
+                print('word not in vec dict ', lemmatized_word)
+                continue
 
-        if idx >= max_word:
-            break
+            if idx >= max_word:
+                break
+        print(stri)
 
     score = model.predict(input_data)
-    print('Prediction ', score)
+    # print('Prediction ', score)
 
-    print('With a score of -Ve: {0}% +Ve: {1}%'.format(int(score[0][0]*100), int(score[0][1]*100)))
-    if abs(score[0][0] - score[0][1]) <= 0.15:
-        print('Detected Sentiment Neutral')
-    else:
-        prediction = np.argmax(score, axis=1)
-        if prediction == 0:
-            print('Sentiment Detected Negative')
-        elif prediction == 1:
-            print('Sentiment Detected Positive')
-    print('Words Used for Prediction:  {0}'.format(stri))
+    # print('With a score of -Ve: {0}% +Ve: {1}%'.format(int(score[0][0]*100), int(score[0][1]*100)))
+    # if abs(score[0][0] - score[0][1]) <= 0.15:
+    #     print('Detected Sentiment Neutral')
+    # else:
+    #     prediction = np.argmax(score, axis=1)
+    #     if prediction == 0:
+    #         print('Sentiment Detected Negative')
+    #     elif prediction == 1:
+    #         print('Sentiment Detected Positive')
+    # print('Words Used for Prediction:  {0}'.format(stri))
 
     return score
 
@@ -264,7 +266,7 @@ def attach_model():
 
 def load_vocab():
 
-    with open('/home/janmejaya/sentiment_files/Model_and_data/complete_vocab_15_word.pkl', 'rb') as f:
+    with open('/home/john/sentiment_files/data/complete_data_aug9/complete_vocab_15_word2.pkl', 'rb') as f:
         data = pickle.load(f)
     vocab_to_index = data['vocab_to_index']
     index_to_vocab = data['index_to_vocab']

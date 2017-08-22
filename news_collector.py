@@ -109,7 +109,7 @@ class collect_news():
         news_list = []
         company_name = re.sub('[^A-Za-z ]+', '', company_name)
 
-        news_channel_to_follow = ['CNN', 'businessinsider‏', 'ft', 'nytimes', 'CNNMoney']
+        news_channel_to_follow = ['CNN', 'businessinsider', 'ft', 'nytimes', 'CNNMoney', 'TwitterBusiness‏', 'FinancialTimes', 'EconBizFin‏', 'ftfinancenews', 'TheEconomist', 'Forbes', 'CNNMoney', 'YahooFinance', 'business', 'WSJ']
         for channel in news_channel_to_follow:
             print(channel)
             try:
@@ -120,7 +120,6 @@ class collect_news():
                     news = tweets.text
                     # Remove weblink from news
                     news = news.split('https://')[0]
-                    print("news ", news)
                     taged_description = nltk.tag.pos_tag(nltk.tokenize.word_tokenize(news))
                     for each_tag in taged_description:
                         if each_tag[1] == 'NNP':
@@ -128,18 +127,18 @@ class collect_news():
                                 news_list.append(news)
                             break
             except:
-                print('For {0} len of news list {1}'.format(channel, len(news_list)))
+                # print('For {0} len of news list {1}'.format(channel, len(news_list)))
                 continue
         print('Final length', len(news_list))
         print(news_list)
 
         start = time.time()
-        with open('/home/janmejaya/sentiment_files/Model_and_data/complete_sentiment_15_word_new.json',
+        with open('/home/john/sentiment_files/model/complete_pre_trained.json',
                   'r') as json_file:
             loaded_model_json = json_file.read()
         loaded_model = model_from_json(loaded_model_json)
         # load weights into new model
-        loaded_model.load_weights("/home/janmejaya/sentiment_files/Model_and_data/complete_sentiment_15_word_new.h5")
+        loaded_model.load_weights("/home/john/sentiment_files/model/complete_pre_trained.h5")
         print("Loaded model from disk")
         print("Time Taken to load model: {0}".format(time.time() - start))
         start2 = time.time()
@@ -152,9 +151,11 @@ class collect_news():
                     if score[idx][0] > score[idx][1]:
                         print('News:> {0}'.format(each_news))
                         print('Predicted Sentiment: Negative\n')
+                        print(score[idx][0])
                     else:
                         print('News:> {0}'.format(each_news))
                         print('Predicted Sentiment: Positive\n')
+                        print(score[idx][1])
         else:
             print('There are No Tweets Today for Stock Symbol: {0}'.format(stock_symbol))
 
