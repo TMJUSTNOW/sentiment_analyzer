@@ -16,12 +16,6 @@ print('Input data shape ', data['input'].shape)
 print('Target data shape ', data['target'].shape)
 print('input data \n', data['input'][:3])
 print('input data \n', data['target'][:3])
-time.sleep(1000)
-
-
-
-
-
 
 
 print('Loading data...')
