@@ -19,8 +19,8 @@ import difflib
 # from sentiment_api import predict_sentiment
 
 df = pd.read_csv('/home/janmejaya/sentiment_analyzer/symbol_to_entity_mapping.csv')
-stock_symbol = df['stock_symbol'].tolist()
-entity_name = df['entityname'].tolist()
+entity_name = [' '.join(val.split()[:3]) for val in df['entityname'].tolist()]
+print(entity_name[:10])
 class TweepyListener(tweepy.StreamListener):
 
     def __init__(self, api=None):
@@ -29,18 +29,29 @@ class TweepyListener(tweepy.StreamListener):
 
 
     def on_data(self, encoded_data):
+        try:
+            decoded_data = json.loads(encoded_data)
+            # Remove Hyperlink
+            if 'text' in decoded_data:
+                tweet = decoded_data['text'].split('https://')[0]
+                # Remove words start with @ and hash tags
+                tweet = re.sub(' @(.+?) ', ' ', tweet)
+                tweet = re.sub(' #(.+?) ', ' ', tweet)
+                cleaned_data = re.sub('[^A-Za-z.!? ]+', '', tweet)
+                for name in entity_name:
+                    if name in cleaned_data:
+                        self.news_list.append(cleaned_data)
+                        print(cleaned_data)
+                        print(name)
 
-        decoded_data = json.loads(encoded_data)
-        cleaned_data = re.sub('[^A-Za-z ]+', '', decoded_data)
-        if any([word for word in word_tokenize(cleaned_data) if word in stock_symbol or word in entity_name]):
-            self.news_list.append(cleaned_data)
-
-        if int(time.time()) % 1000 == 0:
-            print('Writting Data to file')
-            with open('live_news_data.txt', mode='a') as file:
-                for news in self.news_list:
-                    file.writelines(news)
-            self.news_list = []
+            if int(time.time()) % 1000 == 0:
+                if self.news_list:
+                    print('Writting Data to file')
+                    with open('live_news_data.txt', mode='a') as file:
+                        file.writelines(self.news_list)
+                    self.news_list = []
+        except Exception as exc:
+            print('Exception occurred while processing a tweet. Exception is {0}'.format(exc))
 
         return True
 
@@ -194,13 +205,14 @@ class collect_news():
         api_secret_key = 'nYoxVIHJsjhHDpNCESXkKiTOBgrGs4O34QkBtDDAjlshKFaSNs'
         api_access_key = '884591331779031040-qGeQFpCrHGaJFnhCKk4BUIBLn0cWhr1'
         api_access_secret_key = 'QeV2ppw3R71hNvA1zwS5Tmz0t6OXedOF6ma0VAlVLNMUW'
-        title = input('Provide a input to Search: ')
+        title = input('Provide a input to Search separate by comma: ')
+        title = [name.rstrip().lstrip() for name in title.split(',')]
         try:
             auth = tweepy.OAuthHandler(api_key, api_secret_key)
             auth.set_access_token(api_access_key, api_access_secret_key)
             overwrite_listener_obj = TweepyListener()
             stream_api = tweepy.Stream(auth=auth, listener=overwrite_listener_obj)
-            stream_api.filter(track=[title])
+            stream_api.filter(track=title)
         except Exception as exc:
             print('Exception occurred during Authenticating or searching: {0}'.format(exc))
 
