@@ -14,9 +14,7 @@ import os
 import time
 
 
-
-
-# Parameters
+# Model Parameters
 max_word = 15
 batch_size = 32
 state_size = 60
@@ -48,31 +46,6 @@ def recall(y_true, y_pred):
 def sum_pooling(x):
     return K.sum(x, axis=1)
 
-with open('/home/john/sentiment_files/data/cornel_univ_movie_data/cornel_univ_movie_vocab.pkl', 'rb') as f:
-    vocab_data = pickle.load(f)
-
-
-print('Build model...')
-model = Sequential()
-model.add(Masking(mask_value=0, input_shape=(max_word, 300)))
-model.add(TimeDistributed(Dense(150, activation='relu')))
-model.add(Dropout(0.4))
-model.add(LSTM(state_size, dropout=0.4, recurrent_dropout=0.5, activation='relu', return_sequences=False))
-# model.add(Lambda(sum_pooling))
-# model.add(Flatten())
-# model.add(Dropout(0.4))
-model.add(Dense(2, activation='softmax'))
-
-model.compile(loss='categorical_crossentropy', optimizer='adagrad', metrics=['accuracy'])
-
-# # Loading Saved Weights
-# model.load_weights("complete_pretrained_check_point_weights_dense+LSTM.hdf5")
-#
-# ## Saving Model at every epoch
-# filepath="complete_pretrained_check_point_weights_dense+LSTM.hdf5"
-# checkpoint = ModelCheckpoint(filepath, verbose=1, save_best_only=False, save_weights_only=True, period=1)
-# callbacks_list = [checkpoint]
-
 
 def get_len_of_data(data_dir):
     len_input = 0
@@ -84,9 +57,15 @@ def get_len_of_data(data_dir):
 
     return len_input
 
-start_idx = 0
-each_file_data_len = 0      # initialisation so first time condition will be true
-def extract_data_batch_from_dir(data_dir, batch_size):
+def extract_data_batch_from_dir(data_dir, batch_size, vocab_dir, word2vec_dir):
+
+
+    # Load google's Pre-trained word to vector
+    word_vectors = KeyedVectors.load_word2vec_format(word2vec_dir, binary=True)
+    # Load Vocab
+    with open(vocab_dir, 'rb') as f:
+        vocab_data = pickle.load(f)
+
     # len_input = len(data['input'])
     # perm = np.arange(len_input)
     file_list = [each_file for each_file in os.listdir(data_dir) if os.path.isfile(os.path.join(data_dir, each_file))]
@@ -139,35 +118,69 @@ def extract_data_batch_from_dir(data_dir, batch_size):
         start_idx += batch_size
         yield (input_data, target)
 
+def lstm_model():
+    print('Building model...')
+    model = Sequential()
+    model.add(Masking(mask_value=0, input_shape=(max_word, 300)))
+    model.add(TimeDistributed(Dense(150, activation='relu')))
+    model.add(Dropout(0.4))
+    model.add(LSTM(state_size, dropout=0.4, recurrent_dropout=0.5, activation='relu', return_sequences=False))
+    # model.add(Lambda(sum_pooling))
+    # model.add(Flatten())
+    # model.add(Dropout(0.4))
+    model.add(Dense(2, activation='softmax'))
 
-word_vectors = KeyedVectors.load_word2vec_format('/home/john/geek_stuff/Data_Set/Google_News_corpus/GoogleNews-vectors-negative300.bin', binary=True)
+    model.compile(loss='categorical_crossentropy', optimizer='adagrad', metrics=['accuracy'])
+
+    return model
+
+def train_model(train_dir, vocab_dir, word2vec_dir, test_dir=None, check_point_dir=None, saving_dir=None):
+
+    ## Get Model
+    model = lstm_model()
+
+    ## Train Model
+    # Load/Save data from checkpoint
+    if check_point_dir:
+        if os.path.exists(check_point_dir):
+            # Loading Saved Weights
+            model.load_weights(check_point_dir)
+        else:
+            ## Saving Model at every epoch
+            checkpoint = ModelCheckpoint(check_point_dir, verbose=1, save_best_only=False, save_weights_only=True, period=1)
+            callbacks_list = [checkpoint]
+
+    # getting number of input samples (help in deciding number of steps to iterate over generator)
+    len_train = get_len_of_data(train_dir)
+    # get iterator to iterate over train data
+    data_generator = extract_data_batch_from_dir(train_dir, batch_size, vocab_dir, word2vec_dir)
+    model.fit_generator(data_generator, steps_per_epoch=len_train // batch_size, nb_epoch=8, callbacks=None, verbose=1,
+                        validation_data=None, validation_steps=None)
+
+    ## Test Model
+    if test_dir:
+        len_test = get_len_of_data(test_dir)
+        data_generator = extract_data_batch_from_dir(test_dir, batch_size, vocab_dir, word2vec_dir)
+        score, acc = model.evaluate_generator(data_generator, steps=len_test // batch_size)
+        print('ERROR: {0}, Accuracy: {1}'.format(score, acc))
+
+    ## Save model
+    if saving_dir:
+        # serialize model to JSON
+        model_json = model.to_json()
+        with open(saving_dir + '.json', "w") as json_file:
+            json_file.write(model_json)
+        # serialize weights to HDF5
+        model.save_weights(saving_dir + ".h5")
+        print("Saved model to {0}".format(saving_dir))
 
 
-train_dir = '/home/john/sentiment_files/data/cornel_univ_movie_data/train'
-val_dir = '/home/john/sentiment_files/data/cornel_univ_movie_data/val'
-
-len_input = get_len_of_data(train_dir)
-print('Length of input data {0}'.format(len_input))
-data_generator = extract_data_batch_from_dir(train_dir, batch_size)
-# val_data_generator = extract_data_batch_from_dir(val_dir, batch_size=940)
-model.fit_generator(data_generator, steps_per_epoch=len_input//batch_size, nb_epoch=8, callbacks=None, verbose=1,
-                    validation_data=None, validation_steps=None)
-
-test_dir = '/home/john/sentiment_files/data/cornel_univ_movie_data/test'
-len_input = get_len_of_data(test_dir)
-print('Length of test data {0}'.format(len_input))
-data_generator = extract_data_batch_from_dir(test_dir, batch_size)
-score, acc = model.evaluate_generator(data_generator, steps=len_input//batch_size)
-print('ERROR: {0}, Accuracy: {1}'.format(score, acc))
-
-# # serialize model to JSON
-# model_json = model.to_json()
-# with open('/home/john/sentiment_files/model/complete_pre_trained_dense+LSTM.json', "w") as json_file:
-#     json_file.write(model_json)
-# # serialize weights to HDF5
-# model.save_weights("/home/john/sentiment_files/model/complete_pre_trained_dense+LSTM.h5")
-# print("Saved model to disk")
-
-
-# for data in extract_data_batch_from_dir('/home/john/sentiment_files/data/complete_data_15_word/train', batch_size):
-#     continue
+if __name__ == '__main__':
+    train_data_dir = '/home/john/sentiment_files/data/cornel_univ_movie_data/train'
+    test_data_dir = '/home/john/sentiment_files/data/cornel_univ_movie_data/test'
+    check_point_dir = 'complete_pretrained_check_point_weights_dense+LSTM.hdf5'
+    saving_dir = '/home/john/sentiment_files/model/complete_pre_trained_dense+LSTM'
+    vocab_dir = '/home/john/sentiment_files/data/cornel_univ_movie_data/cornel_univ_movie_vocab.pkl'
+    word2vec_dir = '/home/john/geek_stuff/Data_Set/Google_News_corpus/GoogleNews-vectors-negative300.bin'
+    train_model(train_dir=train_data_dir, test_dir=test_data_dir, vocab_dir=vocab_dir, word2vec_dir=word2vec_dir,
+                check_point_dir=check_point_dir, saving_dir=saving_dir)
