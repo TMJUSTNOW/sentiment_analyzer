@@ -16,7 +16,7 @@ import pandas as pd
 from nltk.tokenize import word_tokenize
 import difflib
 
-# from sentiment_api import predict_sentiment
+from sentiment_api import predict_sentiment
 
 df = pd.read_csv('/home/janmejaya/sentiment_analyzer/symbol_to_entity_mapping.csv')
 entity_name = [' '.join(val.split()[:3]) for val in df['entityname'].tolist()]
@@ -200,7 +200,7 @@ class collect_news():
         else:
             print('There are No Tweets Today for Stock Symbol: {0}'.format(stock_symbol))
 
-    def collect_live_twitter_data(self):
+    def collect_live_tweets(self):
 
         api_key = 'BMaRbtElbiTtZiV8B21yD5nAa'
         api_secret_key = 'nYoxVIHJsjhHDpNCESXkKiTOBgrGs4O34QkBtDDAjlshKFaSNs'
@@ -217,9 +217,24 @@ class collect_news():
         except Exception as exc:
             print('Exception occurred during Authenticating or searching: {0}'.format(exc))
 
+    def collect_historic_tweets(self):
+        application_key = 'BMaRbtElbiTtZiV8B21yD5nAa'
+        application_secret_key = 'nYoxVIHJsjhHDpNCESXkKiTOBgrGs4O34QkBtDDAjlshKFaSNs'
+
+        # authenticating app
+        auth = tweepy.AppAuthHandler(application_key, application_secret_key)
+        api = tweepy.API(auth_handler=auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
+        count = 0
+        for tweets in tweepy.Cursor(api.user_timeline, screen_name='YahooFinance').items():
+            print(tweets.text)
+            print(tweets.created_at)
+            count += 1
+            print('\nCount ', count)
+
 
 if __name__ == '__main__':
     # stock_symbol = input('Please Provide a Stock Symbol: ')
     # collect_news().yahoo_rss_news(stock_symbol=stock_symbol)
     # collect_news().twitter_news_collector(stock_symbol)
-    collect_news().collect_live_twitter_data()
+    # collect_news().collect_live_tweets()
+    collect_news().collect_historic_tweets()
