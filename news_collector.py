@@ -16,16 +16,15 @@ import pandas as pd
 from nltk.tokenize import word_tokenize
 import difflib
 
-# from sentiment_api import predict_sentiment
+from sentiment_api import predict_sentiment
 
-df = pd.read_csv('/home/janmejaya/sentiment_analyzer/symbol_to_entity_mapping.csv')
-entity_name = [' '.join(val.split()[:3]) for val in df['entityname'].tolist()]
-print(entity_name[:10])
 class TweepyListener(tweepy.StreamListener):
 
     def __init__(self, api=None):
         self.api = api or API()
         self.news_list = []
+        df = pd.read_csv('/home/janmejaya/sentiment_analyzer/symbol_to_entity_mapping.csv')
+        self.entity_name = [' '.join(val.split()[:3]) for val in df['entityname'].tolist()]
 
 
     def on_data(self, encoded_data):
@@ -38,7 +37,7 @@ class TweepyListener(tweepy.StreamListener):
                 tweet = re.sub(' @(.+?) ', ' ', tweet)
                 tweet = re.sub(' #(.+?) ', ' ', tweet)
                 cleaned_data = re.sub('[^A-Za-z.!? ]+', '', tweet)
-                for name in entity_name:
+                for name in self.entity_name:
                     if name in cleaned_data:
                         self.news_list.append(cleaned_data)
                         print(cleaned_data)
@@ -93,7 +92,7 @@ class collect_news():
                 description = each_item.description.string
                 if description:
                     ## Find subject of interest (company which we are intrested)
-                    #     # TODO: Find 'NP'-> Noun Phrase from sentence(simple/complex)(it should be company name)
+                    #     # TODO: Find 'NP'-> Noun Phrase from sentence(complex)(it should be company name)
                     #     # Use NLTK for this (http://www.nltk.org/book/ch08.html)
                     taged_description = nltk.tag.pos_tag(nltk.tokenize.word_tokenize(description))
                     for each_tag in taged_description:
@@ -103,11 +102,11 @@ class collect_news():
                             break
 
         start = time.time()
-        with open('/home/janmejaya/sentiment_files/Model_and_data/complete_sentiment_15_word_new.json', 'r') as json_file:
+        with open('/home/john/sentiment_files/Model_and_data/Model_Aug19/complete_pre_trained.json', 'r') as json_file:
             loaded_model_json = json_file.read()
         loaded_model = model_from_json(loaded_model_json)
         # load weights into new model
-        loaded_model.load_weights("/home/janmejaya/sentiment_files/Model_and_data/complete_sentiment_15_word_new.h5")
+        loaded_model.load_weights("/home/john/sentiment_files/Model_and_data/Model_Aug19/complete_pre_trained.h5")
         print("Loaded model from disk")
         print("Time Taken to load model: {0}".format(time.time() - start))
         start2 = time.time()
@@ -120,9 +119,14 @@ class collect_news():
                     if score[idx][0] > score[idx][1]:
                         print('News:> {0}'.format(each_news))
                         print('Predicted Sentiment: Negative\n')
+                        print('Score: {0}'.format(score[idx][0]))
                     else:
                         print('News:> {0}'.format(each_news))
                         print('Predicted Sentiment: Positive\n')
+                        print('Score: {0}'.format(score[idx][1]))
+                else:
+                    print('News:> {0}'.format(each_news))
+                    print('Score {0}'.format(score[idx]))
         else:
             print('No news Found for Stock Symbol: {0}'.format(stock_symbol))
 
@@ -174,8 +178,7 @@ class collect_news():
         print(news_list)
 
         start = time.time()
-        with open('/home/john/sentiment_files/model/complete_pre_trained.json',
-                  'r') as json_file:
+        with open('/home/john/sentiment_files/model/complete_pre_trained.json', 'r') as json_file:
             loaded_model_json = json_file.read()
         loaded_model = model_from_json(loaded_model_json)
         # load weights into new model
@@ -219,7 +222,7 @@ class collect_news():
 
 
 if __name__ == '__main__':
-    # stock_symbol = input('Please Provide a Stock Symbol: ')
-    # collect_news().yahoo_rss_news(stock_symbol=stock_symbol)
+    stock_symbol = input('Please Provide a Stock Symbol: ')
+    collect_news().yahoo_rss_news(stock_symbol=stock_symbol)
     # collect_news().twitter_news_collector(stock_symbol)
-    collect_news().collect_live_twitter_data()
+    # collect_news().collect_live_twitter_data()
