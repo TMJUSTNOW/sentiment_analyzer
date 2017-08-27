@@ -101,36 +101,9 @@ class collect_news():
                                 news_list.append(description)
                             break
 
-        start = time.time()
-        with open('/home/john/sentiment_files/Model_and_data/Model_Aug19/complete_pre_trained.json', 'r') as json_file:
-            loaded_model_json = json_file.read()
-        loaded_model = model_from_json(loaded_model_json)
-        # load weights into new model
-        loaded_model.load_weights("/home/john/sentiment_files/Model_and_data/Model_Aug19/complete_pre_trained.h5")
-        print("Loaded model from disk")
-        print("Time Taken to load model: {0}".format(time.time() - start))
-        start2 = time.time()
-        if news_list:
-            score = predict_sentiment(model=loaded_model, clean_string_list=news_list)
-            print('Time for sentiment prediction: {0}'.format(time.time() - start2))
-            for idx, each_news in enumerate(news_list):
+        return news_list
 
-                if abs(score[idx][0] - score[idx][1]) >= 0.15:
-                    if score[idx][0] > score[idx][1]:
-                        print('News:> {0}'.format(each_news))
-                        print('Predicted Sentiment: Negative\n')
-                        print('Score: {0}'.format(score[idx][0]))
-                    else:
-                        print('News:> {0}'.format(each_news))
-                        print('Predicted Sentiment: Positive\n')
-                        print('Score: {0}'.format(score[idx][1]))
-                else:
-                    print('News:> {0}'.format(each_news))
-                    print('Score {0}'.format(score[idx]))
-        else:
-            print('No news Found for Stock Symbol: {0}'.format(stock_symbol))
-
-    def twitter_news_collector(self, stock_symbol):
+    def twitter_time_line_news(self, company_name_list):
         ## Twitter Data
         api_key = 'BMaRbtElbiTtZiV8B21yD5nAa'
         api_secret_key = 'nYoxVIHJsjhHDpNCESXkKiTOBgrGs4O34QkBtDDAjlshKFaSNs'
@@ -142,18 +115,8 @@ class collect_news():
         api = tweepy.API(auth)
 
         utc_today_date = datetime.utcnow().day
-        symbol_lookup_url = 'http://d.yimg.com/autoc.finance.yahoo.com/autoc?query={}&region=1&lang=en'
-        symbol_resp = requests.get(symbol_lookup_url.format(stock_symbol)).json()
-        company_name = ''
-        for result_dict in symbol_resp['ResultSet']['Result']:
-            if result_dict['exchDisp'] in ['NASDAQ', 'NYSE']:
-                company_name = result_dict['name']
-                break
 
-        print('Company name: ', company_name)
         news_list = []
-        company_name = re.sub('[^A-Za-z ]+', '', company_name)
-
         news_channel_to_follow = ['CNN', 'businessinsider', 'ft', 'nytimes', 'CNNMoney', 'TwitterBusiness‏', 'FinancialTimes', 'EconBizFin‏', 'ftfinancenews', 'TheEconomist', 'Forbes', 'CNNMoney', 'YahooFinance', 'business', 'WSJ']
         for channel in news_channel_to_follow:
             print(channel)
@@ -165,43 +128,20 @@ class collect_news():
                     news = tweets.text
                     # Remove weblink from news
                     news = news.split('https://')[0]
-                    taged_description = nltk.tag.pos_tag(nltk.tokenize.word_tokenize(news))
-                    for each_tag in taged_description:
-                        if each_tag[1] == 'NNP':
-                            if each_tag[0] in [company_name.split(' ')[0], stock_symbol]:
-                                news_list.append(news)
-                            break
+                    for company_name in company_name_list:
+                        if company_name in news:
+                            taged_description = nltk.tag.pos_tag(nltk.tokenize.word_tokenize(news))
+                            for each_tag in taged_description:
+                                # Filtering 'Simple sentences' which contains provided company name
+                                # If first noun phrase encountered doesn't contain company name don't consider that news.
+                                if each_tag[1] == 'NNP' and each_tag[0] in company_name:            # Filter out news given stock symbol
+                                    news_list.append(news)
+                                    break
             except:
                 # print('For {0} len of news list {1}'.format(channel, len(news_list)))
                 continue
         print('Final length', len(news_list))
-        print(news_list)
-
-        start = time.time()
-        with open('/home/john/sentiment_files/model/complete_pre_trained.json', 'r') as json_file:
-            loaded_model_json = json_file.read()
-        loaded_model = model_from_json(loaded_model_json)
-        # load weights into new model
-        loaded_model.load_weights("/home/john/sentiment_files/model/complete_pre_trained.h5")
-        print("Loaded model from disk")
-        print("Time Taken to load model: {0}".format(time.time() - start))
-        start2 = time.time()
-        if news_list:
-            score = predict_sentiment(model=loaded_model, clean_string_list=news_list)
-            print('Time for sentiment prediction: {0}'.format(time.time() - start2))
-            for idx, each_news in enumerate(news_list):
-
-                if abs(score[idx][0] - score[idx][1]) >= 0.15:
-                    if score[idx][0] > score[idx][1]:
-                        print('News:> {0}'.format(each_news))
-                        print('Predicted Sentiment: Negative\n')
-                        print(score[idx][0])
-                    else:
-                        print('News:> {0}'.format(each_news))
-                        print('Predicted Sentiment: Positive\n')
-                        print(score[idx][1])
-        else:
-            print('There are No Tweets Today for Stock Symbol: {0}'.format(stock_symbol))
+        return news_list
 
     def collect_live_tweets(self):
 
@@ -234,10 +174,68 @@ class collect_news():
             count += 1
             print('\nCount ', count)
 
+    def predict_sentiment(self, news_list):
+        start = time.time()
+        with open('/home/john/sentiment_files/Model_and_data/Model_Aug19/complete_pre_trained.json', 'r') as json_file:
+            loaded_model_json = json_file.read()
+        loaded_model = model_from_json(loaded_model_json)
+        # load weights into new model
+        loaded_model.load_weights("/home/john/sentiment_files/Model_and_data/Model_Aug19/complete_pre_trained.h5")
+        print("Loaded model from disk")
+        print("Time Taken to load model: {0}".format(time.time() - start))
+        start2 = time.time()
+        if news_list:
+            score = predict_sentiment(model=loaded_model, clean_string_list=news_list)
+            print('Time for sentiment prediction: {0}'.format(time.time() - start2))
+            for idx, each_news in enumerate(news_list):
+
+                if abs(score[idx][0] - score[idx][1]) >= 0.15:
+                    if score[idx][0] > score[idx][1]:
+                        print('News:> {0}'.format(each_news))
+                        print('Predicted Sentiment: Negative\n')
+                        print('Score: {0}'.format(score[idx][0]))
+                    else:
+                        print('News:> {0}'.format(each_news))
+                        print('Predicted Sentiment: Positive\n')
+                        print('Score: {0}'.format(score[idx][1]))
+                else:
+                    print('News:> {0}'.format(each_news))
+                    print('Score {0}'.format(score[idx]))
+
+
+def _test_yahoo_rss_news():
+    stock_symbol = input('Please Provide a Stock Symbol: ')
+    news_collector = collect_news()
+    news_list = news_collector.yahoo_rss_news(stock_symbol=stock_symbol)
+    if news_list:
+        news_collector.predict_sentiment(news_list)
+    else:
+        print('No news Found for Stock Symbol: {0}'.format(stock_symbol))
+
+def _test_twitter_timeline_news():
+    stock_symbol = input('Please Provide a Stock Symbol: ')
+    symbol_lookup_url = 'http://d.yimg.com/autoc.finance.yahoo.com/autoc?query={}&region=1&lang=en'
+    symbol_resp = requests.get(symbol_lookup_url.format(stock_symbol)).json()
+    company_name = ''
+    for result_dict in symbol_resp['ResultSet']['Result']:
+        if result_dict['exchDisp'] in ['NASDAQ', 'NYSE']:
+            company_name = result_dict['name']
+            break
+
+    if company_name:
+        company_name = ' '.join(re.sub('[^A-Za-z0-9 ]+', '', company_name).split(' ')[:3])
+        news_collector = collect_news()
+        news_list = news_collector.twitter_time_line_news(company_name_list=[company_name])
+        if news_list:
+            news_collector.predict_sentiment(news_list)
+        else:
+            print('No news Found for Stock Symbol: {0}'.format(stock_symbol))
+    else:
+        print('Unable to find any company name related to given Stock Symbol: {0}'.format(stock_symbol))
+    
 
 if __name__ == '__main__':
-    stock_symbol = input('Please Provide a Stock Symbol: ')
-    collect_news().yahoo_rss_news(stock_symbol=stock_symbol)
+    _test_yahoo_rss_news()
     # collect_news().twitter_news_collector(stock_symbol)
     # collect_news().collect_live_tweets()
     collect_news().collect_historic_tweets()
