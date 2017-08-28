@@ -6,6 +6,7 @@ import time
 import re
 import json
 import html
+import csv
 
 from keras.models import model_from_json
 import nltk
@@ -13,10 +14,11 @@ from bs4 import BeautifulSoup
 import tweepy
 from tweepy.api import API
 import pandas as pd
+import numpy as np
 from nltk.tokenize import word_tokenize
 import difflib
 
-from sentiment_api import predict_sentiment
+# from sentiment_api import predict_sentiment
 
 class TweepyListener(tweepy.StreamListener):
 
@@ -86,6 +88,7 @@ class collect_news():
                 company_name = result_dict['name']
                 break
         news_list = []
+        pub_date = []
         company_name = re.sub('[^A-Za-z ]+', '', company_name)
         for each_item in soup.find_all('item'):
             if dparser.parse(str(each_item.pubdate.string)).day == datetime.utcnow().day:
@@ -99,9 +102,10 @@ class collect_news():
                         if each_tag[1] == 'NNP':
                             if each_tag[0] in [company_name.split(' ')[0], stock_symbol]:
                                 news_list.append(description)
+                                pub_date.append(dparser.parse(str(each_item.pubdate.string)))
                             break
 
-        return news_list
+        return (news_list, pub_date)
 
     def twitter_time_line_news(self, company_name_list):
         ## Twitter Data
@@ -117,6 +121,7 @@ class collect_news():
         utc_today_date = datetime.utcnow().day
 
         news_list = []
+        pub_date = []
         news_channel_to_follow = ['CNN', 'businessinsider', 'ft', 'nytimes', 'CNNMoney', 'TwitterBusiness‏', 'FinancialTimes', 'EconBizFin‏', 'ftfinancenews', 'TheEconomist', 'Forbes', 'CNNMoney', 'YahooFinance', 'business', 'WSJ']
         for channel in news_channel_to_follow:
             print(channel)
@@ -126,6 +131,7 @@ class collect_news():
                     if tweets.created_at.day != utc_today_date:
                         break
                     news = tweets.text
+                    print('Date of tweet ', tweets.created_at)
                     # Remove weblink from news
                     news = news.split('https://')[0]
                     for company_name in company_name_list:
@@ -136,12 +142,48 @@ class collect_news():
                                 # If first noun phrase encountered doesn't contain company name don't consider that news.
                                 if each_tag[1] == 'NNP' and each_tag[0] in company_name:            # Filter out news given stock symbol
                                     news_list.append(news)
+                                    pub_date.append(tweets.created_at)
                                     break
             except:
                 # print('For {0} len of news list {1}'.format(channel, len(news_list)))
                 continue
         print('Final length', len(news_list))
-        return news_list
+        return (news_list, pub_date)
+
+    def get_stock_data(self, symbol, period, interval, stock_exch='NASD'):
+        try:
+            query_url = 'https://www.google.com/finance/getprices?q={0}&x={3}&i={2}&f=d,c,v,k,o,h,l&df=cpct&auto=0&ei=Ef6XUYDfCqSTiAKEMg&p={1}'.format(
+                                                        symbol, period, interval, stock_exch)
+            stock_data_raw = requests.get(query_url).content.decode('utf-8')
+
+            # Formatting Raw stock data
+            ## This part is coded as per result returned google query
+            start = stock_data_raw.index('COLUMNS=') + len('COLUMNS=')
+            end = stock_data_raw.index('\nDATA=')
+            column_names = stock_data_raw[start:end]            # Contains Column names separated by comma
+            print('Column Names: ', column_names)
+            # getting data index
+            start_index_str = re.search('TIMEZONE_OFFSET=(.*)\n', stock_data_raw).group(0)
+            start = stock_data_raw.index(start_index_str) + len(start_index_str)
+            data = stock_data_raw[start:-2]                     # Removing Last '\n'
+            data = data.split('\n')
+            first_data = data[0].split(',')
+            full_time_stamp = int(first_data[0][1:])
+            first_data[0] = full_time_stamp
+
+            df = pd.DataFrame(data=[first_data], columns=column_names.split(','))
+            for i in range(1, len(data)):
+                # convert first element to unix date format
+                each_row = data[i].split(',')
+                # converting partial time stamp to full time stamp
+                each_row[0] = full_time_stamp + int(each_row[0]) * int(interval)
+                df = df.append(pd.DataFrame([each_row], columns=column_names.split(',')), ignore_index=True)
+            df = df.apply(pd.to_numeric)
+            print('DAta frame \n', df)
+        except Exception as exc:
+            print('Exception occurred while getting stock data, EXC: {0}'.format(exc))
+
+
 
     def collect_live_tweets(self):
 
@@ -206,7 +248,7 @@ class collect_news():
 def _test_yahoo_rss_news():
     stock_symbol = input('Please Provide a Stock Symbol: ')
     news_collector = collect_news()
-    news_list = news_collector.yahoo_rss_news(stock_symbol=stock_symbol)
+    news_list, _ = news_collector.yahoo_rss_news(stock_symbol=stock_symbol)
     if news_list:
         news_collector.predict_sentiment(news_list)
     else:
@@ -225,7 +267,7 @@ def _test_twitter_timeline_news():
     if company_name:
         company_name = ' '.join(re.sub('[^A-Za-z0-9 ]+', '', company_name).split(' ')[:3])
         news_collector = collect_news()
-        news_list = news_collector.twitter_time_line_news(company_name_list=[company_name])
+        news_list, _ = news_collector.twitter_time_line_news(company_name_list=[company_name])
         if news_list:
             news_collector.predict_sentiment(news_list)
         else:
@@ -235,7 +277,8 @@ def _test_twitter_timeline_news():
     
 
 if __name__ == '__main__':
-    _test_yahoo_rss_news()
+    # _test_yahoo_rss_news()
     # collect_news().twitter_news_collector(stock_symbol)
     # collect_news().collect_live_tweets()
-    collect_news().collect_historic_tweets()
+    # collect_news().collect_historic_tweets()
+    collect_news().get_stock_data('AAPL', '2d', '3600')
