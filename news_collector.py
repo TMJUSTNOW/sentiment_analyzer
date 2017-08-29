@@ -7,6 +7,8 @@ import re
 import json
 import html
 import csv
+import calendar
+import os
 
 from keras.models import model_from_json
 import nltk
@@ -73,7 +75,7 @@ class collect_news():
         print('URL:\n{0}'.format(URL.format('Apple Inc', 8, 9, 8, 17)))
         print(response.content)
 
-    def yahoo_rss_news(self, stock_symbol='aapl'):
+    def yahoo_rss_news(self, stock_symbol='aapl', period='today'):
         rss_req_url = 'http://finance.yahoo.com/rss/headline?s={0}'
         resp = requests.get(rss_req_url.format(stock_symbol))
         soup = BeautifulSoup(resp.content, 'html.parser')
@@ -85,28 +87,40 @@ class collect_news():
             if result_dict['exchDisp'] in ['NASDAQ', 'NYSE']:
                 company_name = result_dict['name']
                 break
-        news_list = []
-        pub_date = []
-        company_name = re.sub('[^A-Za-z ]+', '', company_name)
+        description_list = []
+        published_date_list = []
+        company_name = re.sub('[^A-Za-z0-9 ]+', '', company_name)
         for each_item in soup.find_all('item'):
             published_date = dparser.parse(str(each_item.pubdate.string))
-            if published_date.day == datetime.utcnow().day:
-                description = each_item.description.string
-                if description:
-                    ## Find subject of interest (company which we are intrested)
-                    #     # TODO: Find 'NP'-> Noun Phrase from sentence(complex)(it should be company name)
-                    #     # Use NLTK for this (http://www.nltk.org/book/ch08.html)
-                    taged_description = nltk.tag.pos_tag(nltk.tokenize.word_tokenize(description))
-                    for each_tag in taged_description:
-                        if each_tag[1] == 'NNP':
-                            if each_tag[0] in [company_name.split(' ')[0], stock_symbol]:
-                                news_list.append(description)
-                                pub_date.append(published_date)
-                            break
+            if period == 'today':
+                if published_date.day == datetime.utcnow().day:
+                    description_list.append(each_item.description.string)
+                    published_date_list.append(published_date)
+            elif period == 'yesterday':
+                ## TODO add condition for it
+                pass
+            elif period == 'all':
+                description_list.append(each_item.description.string)
+                published_date_list.append(published_date)
+
+        news_list = []
+        pub_date = []
+        if description_list and published_date_list:
+            for idx, description in enumerate(description_list):
+                ## Find subject of interest (company which we are intrested)
+                #     # TODO: Find 'NP'-> Noun Phrase from sentence(complex)(it should be company name)
+                #     # Use NLTK for this (http://www.nltk.org/book/ch08.html)
+                taged_description = nltk.tag.pos_tag(nltk.tokenize.word_tokenize(description))
+                for each_tag in taged_description:
+                    if each_tag[1] == 'NNP':
+                        if each_tag[0] in [company_name.split(' ')[0], stock_symbol]:
+                            news_list.append(description)
+                            pub_date.append(published_date_list[idx])
+                        break
 
         return (news_list, pub_date)
 
-    def twitter_time_line_news(self, company_name):
+    def twitter_time_line_news(self, company_name, period='today'):
         ## Twitter Data
         api_key = 'BMaRbtElbiTtZiV8B21yD5nAa'
         api_secret_key = 'nYoxVIHJsjhHDpNCESXkKiTOBgrGs4O34QkBtDDAjlshKFaSNs'
@@ -124,12 +138,12 @@ class collect_news():
         pub_date = []
         news_channel_to_follow = ['CNN', 'businessinsider', 'ft', 'nytimes', 'CNNMoney', 'TwitterBusiness‏', 'FinancialTimes', 'EconBizFin‏', 'ftfinancenews', 'TheEconomist', 'Forbes', 'CNNMoney', 'YahooFinance', 'business', 'WSJ']
         for channel in news_channel_to_follow:
-            print(channel)
             try:
                 for tweets in tweepy.Cursor(api.user_timeline, screen_name=channel).items():
-                    ## gather Today's tweet
-                    if tweets.created_at.day != utc_today_date:
-                        break
+                    if period == 'today':
+                        ## gather Today's tweet
+                        if tweets.created_at.day != utc_today_date:
+                            break
                     news = tweets.text
                     # Remove weblink from news
                     news = news.split('https://')[0]
@@ -149,23 +163,26 @@ class collect_news():
         return (news_list, pub_date)
 
     def get_stock_data(self, symbol, period, interval, stock_exch='NASD'):
-        try:
-            query_url = 'https://www.google.com/finance/getprices?q={0}&x={3}&i={2}&f=d,c,v,k,o,h,l&df=cpct&auto=0&ei=Ef6XUYDfCqSTiAKEMg&p={1}'.format(
-                                                        symbol, period, interval, stock_exch)
-            stock_data_raw = requests.get(query_url).content.decode('utf-8')
+        # try:
+        query_url = 'https://www.google.com/finance/getprices?q={0}&x={3}&i={2}&f=d,c,v,k,o,h,l&df=cpct&auto=0&ei=Ef6XUYDfCqSTiAKEMg&p={1}'.format(
+                                                    symbol, period, interval, stock_exch)
+        stock_data_raw = requests.get(query_url).content.decode('utf-8')
 
-            # Formatting Raw stock data
-            ## This part is coded as per result returned google query
-            start = stock_data_raw.index('COLUMNS=') + len('COLUMNS=')
-            end = stock_data_raw.index('\nDATA=')
-            column_names = stock_data_raw[start:end]            # Contains Column names separated by comma
-            print('Column Names: ', column_names)
-            # getting data index
-            start_index_str = re.search('TIMEZONE_OFFSET=(.*)\n', stock_data_raw).group(0)
-            start = stock_data_raw.index(start_index_str) + len(start_index_str)
+        # Formatting Raw stock data
+        ## This part is coded as per result returned google query
+        start = stock_data_raw.index('COLUMNS=') + len('COLUMNS=')
+        end = stock_data_raw.index('\nDATA=')
+        column_names = stock_data_raw[start:end]            # Contains Column names separated by comma
+        # getting data index
+        start_index_str = re.search('TIMEZONE_OFFSET=(.*)\n', stock_data_raw)
+        data = ''
+        if start_index_str:
+            start = stock_data_raw.index(start_index_str.group(0)) + len(start_index_str.group(0))
             data = stock_data_raw[start:-2]                     # Removing Last '\n'
+        if data:
             data = data.split('\n')
             first_data = data[0].split(',')
+            # Time stamp in stock query is New York's local time in unix timestamp format
             full_time_stamp = int(first_data[0][1:])
             first_data[0] = full_time_stamp
 
@@ -178,9 +195,11 @@ class collect_news():
                 df = df.append(pd.DataFrame([each_row], columns=column_names.split(',')), ignore_index=True)
             df = df.apply(pd.to_numeric)
             return df
-        except Exception as exc:
-            print('Exception occurred while getting stock data, EXC: {0}'.format(exc))
-            return None
+        else:
+            return pd.DataFrame()
+        # except Exception as exc:
+        #     print('Exception occurred while getting stock data, EXC: {0}'.format(exc))
+        #     return pd.DataFrame()                   # Return empty DataFrame
 
     def collect_live_tweets(self):
 
@@ -251,21 +270,52 @@ def collect_data():
     del stock_symbol_df
     for idx, company_name in enumerate(company_names_list):
         print('For Company Name ', company_name)
-        twitter_news_list, twitter_pub_date = news_collector.twitter_time_line_news(company_name=company_name)
-        rss_news_list, rss_pub_date = news_collector.yahoo_rss_news(stock_symbol=symbols_list[idx])
+        twitter_news_list, twitter_pub_date = news_collector.twitter_time_line_news(company_name=company_name, period='all')
+        rss_news_list, rss_pub_date = news_collector.yahoo_rss_news(stock_symbol=symbols_list[idx], period='all')
 
-        # TODO: get information regarding time zone of twitter and rss data, convert it to NY time zone as we are using NASDAQ exchange's stock data
-        if twitter_pub_date or rss_pub_date:
-            min_date = min(twitter_pub_date + rss_pub_date)
-            delta_date = today_date - min_date
+        complete_news = twitter_news_list + rss_news_list
+        complete_pub_date = twitter_pub_date + rss_pub_date
+        if complete_pub_date:
+            min_date = min(complete_pub_date)
+            delta_date = today_date - min_date.date()
             period = delta_date.days
-            df = []
+            df = pd.DataFrame()
             if period:
-                df = news_collector.get_stock_data(symbol=symbols_list[idx], period=period, interval='3600')
+                df = news_collector.get_stock_data(symbol=symbols_list[idx], period=str(period), interval='3600')
 
-            if df:
-                # TODO: get if date is with in two hour time period get that news and stock price
-                
+            if not df.empty:
+                # Adding offset in stock data to convert it to UTC unix timestamp
+                df['DATE'] = df['DATE'].values + 4*3600                       # UTC time = NY time + 4hrs
+                # Twitter and RSS news feed time is in UTC, so convert it into unix time stamp
+                # calender module converts date into UTC unix time stamp
+                news_unix_time = [calendar.timegm(date_field.timetuple()) for date_field in complete_pub_date]
+                print('Greater than = \n', news_unix_time)
+                print('less than \n', [unix_time + 2*3600 for unix_time in news_unix_time])
+                print('DAtaFrame\n', df)
+                for idx, unix_time in enumerate(news_unix_time):
+                    query_df = df[(df['DATE'] >= unix_time) & (df['DATE'] < (unix_time + 2*3600))]
+                    print('Query DAtaFrame \n', query_df)
+                    if not query_df.empty:
+                        # Dropping unnecessary column
+                        # query_df.drop(['CDAYS', 'VOLUME', 'LOW', 'HIGH'], inplace=True)
+                        print('complete news\n', complete_news)
+                        print('complete Publication date\n', complete_pub_date)
+                        open_price = max(query_df['OPEN'].tolist())
+                        close_price = max(query_df['CLOSE'].tolist())
+                        date_field = max(query_df['DATE'].tolist())
+                        news = complete_news[idx]
+                        print('Open price: {0}, close Price: {1}, date: {2}, NEWS: {3}'.format(open_price, close_price, date_field, news))
+                        if os.path.isfile('/home/janmejaya/sentiment_analyzer/daily_stock_and_news.csv'):
+                            with open('/home/janmejaya/sentiment_analyzer/daily_stock_and_news.csv', 'a') as file:
+                                csvwritter = csv.writer(file)
+                                csvwritter.writerow([date_field, news, open_price, close_price])
+                        else:
+                            with open('/home/janmejaya/sentiment_analyzer/daily_stock_and_news.csv', 'w') as file:
+                                csvwritter = csv.writer(file)
+                                csvwritter.writerow(['Date', 'News', 'Open', 'Close'])              # Write Header
+                                csvwritter.writerow([date_field, news, open_price, close_price])
+
+
 
 
 
@@ -301,6 +351,7 @@ def _test_twitter_timeline_news():
 
 if __name__ == '__main__':
     # _test_yahoo_rss_news()
+    # _test_twitter_timeline_news()
     # collect_news().twitter_news_collector(stock_symbol)
     # collect_news().collect_live_tweets()
     # collect_news().collect_historic_tweets()
